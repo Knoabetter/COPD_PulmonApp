@@ -4,8 +4,8 @@ from enum import Enum
 class FORMATS(Enum):
     class OLD(Enum):
         FULL = 0
-        ONLY_SPIROMETRY = 1
-        WITHOUT_POST = 2
+        ONLY_SPIROMETRY_WITH_POST = 1
+        ONLY_SPIROMETRY_WITHOUT_POST = 2
     class NEW(Enum):
         FULL_WITH_POST = 3
         FULL_WITHOUT_POST = 4
