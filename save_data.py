@@ -144,6 +144,8 @@ def expand_data_keys(data):
             data = expand_full_numeric_row(data, key)
         elif key == "ID":
             data[key] = add_id_control_digit(data[key])
+        elif key == "Date":
+            data = expand_date(data)
 
     return data
 

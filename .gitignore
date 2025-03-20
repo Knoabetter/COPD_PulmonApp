@@ -1,6 +1,5 @@
-# Ignore Excel files
 *.xlsx
 *.xls
-
-# Ignore PDF files
 *.pdf
+*.txt
+__pycache__/
