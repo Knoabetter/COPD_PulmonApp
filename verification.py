@@ -11,7 +11,17 @@ def validate_post_pred_percent(post, pred, percent):
 def validate_pre_pred_percent(pre, pred, percent):
     return abs(pre - round((pred * percent) / 100 ,2)) < ROUND_ERROR_LEEWAY
 
-def validate_all(validation_errors, value_name, pred, pre, pred_pre_percent, post, pred_post_percent, dchange):
+def get_full_values(value):
+    if value.count(' ') == 6:
+        pred, _, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
+    else:
+        pred, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
+
+    return pred, pre, pred_pre_percent, post, pred_post_percent, dchange
+
+def validate_all(validation_errors, value_name, value):
+    pred, pre, pred_pre_percent, post, pred_post_percent, dchange = get_full_values(value)
+
     if not validate_post_pred_percent(float(post), float(pred), float(pred_post_percent)):
         validation_errors += "Failed pred/post percent validation for {}, ".format(value_name)
     if not validate_pre_pred_percent(float(pre), float(pred), float(pred_pre_percent)):
@@ -27,13 +37,17 @@ def validate_only_dhcange(validation_errors, value_name, pre, post, dchange):
 
     return validation_errors
 
-def validate_only_pre_pred(validation_errors, value_name, pred, LLN, pre, pred_pre_percent):
-    if not validate_pre_pred_percent(float(pre), float(pred), float(pred_pre_percent)):
-        validation_errors += "Failed pre/pred percent validation for {}, ".format(value_name)
+def get_pred_pre_values(value):
+    if value.count(' ') == 3:
+        pred, _, pre, pred_pre_percent = value.split(' ')
+    else:
+        pred, pre, pred_pre_percent = value.split(' ')
 
-    return validation_errors
+    return pred, pre, pred_pre_percent
 
-def validate_only_pre_pred_new(validation_errors, value_name, pred, pre, pred_pre_percent):
+def validate_only_pre_pred(validation_errors, value_name, value):
+    pred, pre, pred_pre_percent = get_pred_pre_values(value)
+
     if not validate_pre_pred_percent(float(pre), float(pred), float(pred_pre_percent)):
         validation_errors += "Failed pre/pred percent validation for {}, ".format(value_name)
 
@@ -83,30 +97,12 @@ def verify_numeric_results(value_name, value, file_format):
     if value == None:
         return "No value to validate for {},".format(value_name)
     try:
-        if file_format == FORMATS.OLD.value.FULL:
-            if value_name in NUMERIC_WITH_POST_FIELDS:
-                pred, _, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
-                validation_errors += validate_all(validation_errors, value_name, pred, pre, pred_pre_percent, post, pred_post_percent, dchange)
-            elif value_name in ONLY_DCHANGE_VALIDATIONS_FIELDS:
-                validation_errors += validate_only_dhcange(validation_errors, value_name, *value.split(' '))
-            else:
-                validation_errors += validate_only_pre_pred(validation_errors, value_name, *value.split(' '))
-        elif file_format == FORMATS.OLD.value.ONLY_SPIROMETRY_WITHOUT_POST:
-            validation_errors += validate_only_pre_pred(validation_errors, value_name, *value.split(' '))
-        elif file_format == FORMATS.OLD.value.ONLY_SPIROMETRY_WITH_POST:
-            pred, _, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
-            validation_errors += validate_all(validation_errors, value_name, pred, pre, pred_pre_percent, post,
-                                              pred_post_percent, dchange)
-        elif file_format == FORMATS.NEW.value.ONLY_SPIROMETRY_WITHOUT_POST:
-            validation_errors += validate_only_pre_pred_new(validation_errors, value_name, *value.split(' '))
-        elif file_format == FORMATS.NEW.value.ONLY_SPIROMETRY_WITH_POST:
-            if value_name in NUMERIC_WITH_POST_FIELDS:
-                pred, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
-                validation_errors += validate_all(validation_errors, value_name, pred, pre, pred_pre_percent, post,
-                                                  pred_post_percent, dchange)
-            elif value_name in ONLY_DCHANGE_VALIDATIONS_FIELDS:
-                validation_errors += validate_only_dhcange(validation_errors, value_name, *value.split(' '))
-
+        if value_name in ONLY_DCHANGE_VALIDATIONS_FIELDS:
+            validation_errors += validate_only_dhcange(validation_errors, value_name, *value.split(' '))
+        elif value.count(' ') == 2 or value.count(' ') == 3:
+            validation_errors += validate_only_pre_pred(validation_errors, value_name, value)
+        else:
+            validation_errors += validate_all(validation_errors, value_name, value)
     except Exception as e:
         print(e)
         validation_errors += "Failed numeric validation for {}, ".format(value_name)
@@ -114,28 +110,15 @@ def verify_numeric_results(value_name, value, file_format):
 
     return validation_errors
 
-def verify_old_data_results(data):
-    for field in NUMERIC_VALIDATE_FIELDS:
-        validation_errors = verify_numeric_results(field, data[field], data["Format"])
+def verify_data_results(data, numeric_fields_to_validate):
+    for key in data.keys():
+        if key in numeric_fields_to_validate:
+            validation_errors = verify_numeric_results(key, data[key], data["Format"])
 
-        if data[field] != None and len([item for item in data[field].split(" ") if item.endswith('.')]) != 0:
-            validation_errors += "Failed missing after dot validation for {}, ".format(field)
+            if data[key] != None and len([item for item in data[key].split(" ") if item.endswith('.')]) != 0:
+                validation_errors += "Failed missing after dot validation for {}, ".format(key)
 
-        data["Validator"] += validation_errors
-
-    if data["Validator"] == "":
-        data["Validator"] = "OK"
-
-    return data
-
-def verify_new_data_results(data):
-    for field in NEW_NUMERIC_VALIDATE_FIELDS:
-        validation_errors = verify_numeric_results(field, data[field], data["Format"])
-
-        if data[field] != None and len([item for item in data[field].split(" ") if item.endswith('.')]) != 0:
-            validation_errors += "Failed missing after dot validation for {}, ".format(field)
-
-        data["Validator"] += validation_errors
+            data["Validator"] += validation_errors
 
     if data["Validator"] == "":
         data["Validator"] = "OK"

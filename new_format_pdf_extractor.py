@@ -5,12 +5,9 @@ import cv2
 import easyocr
 from pdf2image import convert_from_path
 
-from consts import TEXT_FIELDS, NEW_ONLY_SPIROMETRY_WITHOUT_POST_SPECIFIC_REGEX_FIELDS, \
-    BASE_NEW_REGEX_FIELDS, NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS, \
-    NEW_ONLY_SPIROMETRY_WITHOUT_POST_FORMAT_IDENTIFIER, WITH_POST_IDENTIFIER, NEW_SPIROMETRY_FULL_IDENTIFIER, \
-    NEW_FULL_WITH_POST_SPECIFIC_REGEX_FIELDS, NEW_FULL_WITHOUT_POST_SPECIFIC_REGEX_FIELDS
+from consts import *
 from save_data import append_data
-from verification import verify_new_data_results
+from verification import verify_data_results
 
 
 def convert_pdf_to_jpegs(file_path: str) -> [str]:
@@ -167,7 +164,7 @@ def get_data_from_folder(folder_path):
             data, value, text, _ = analyze_images(img_path, base_threshold_level=180, num_of_thresholds=45)
             debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
             debugging_data += (text + "\n\n")
-            t = verify_new_data_results(data)
+            t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
             append_data(t)
             delete_images(img_path)
 
