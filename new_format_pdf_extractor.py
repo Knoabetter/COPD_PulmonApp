@@ -140,9 +140,9 @@ def extract_text(text):
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 if field not in TEXT_FIELDS:
-                    data[field] = " ".join(match.groups()).lower().replace("o","0").replace("l","1").replace(",", ".")
+                    data[field] = " ".join(match.groups()).lower().replace("o","0").replace("l","1").replace(",", ".").replace("~", "-")
                 else:
-                    data[field] = " ".join(match.groups()).replace("~", "-")
+                    data[field] = " ".join(match.groups())
             else:
                 data[field] = None  # Default to None if not found
         else:
