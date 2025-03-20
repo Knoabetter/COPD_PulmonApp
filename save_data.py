@@ -111,7 +111,9 @@ def expand_date(data):
         data["Date_POST"] = None
     elif len(data["Date"].split(' ')) == 2:
         data["Date_PRE"], data["Date_POST"] = data["Date"].split(' ')
-        del data["Date"]
+    elif len(data["Date"].split(' ')) == 3:
+        data["Date_PRE"] = '/'.join(data["Date"].split(' '))
+        data["Date_POST"] = None
 
     del data["Date"]
 

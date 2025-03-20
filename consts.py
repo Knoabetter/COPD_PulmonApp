@@ -65,7 +65,7 @@ OLD_FULL_SPECIFIC_REGEX_FIELDS = {
             }
 
 OLD_ONLY_SPIROMETRY_SPECIFIC_REGEX_FIELDS = {
-                "Format": FORMATS.OLD.value.ONLY_SPIROMETRY,
+                "Format": FORMATS.OLD.value.ONLY_SPIROMETRY_WITH_POST,
                 "Date": r"Date (\b\d{6}\b) (\b\d{6}\b)",
                 "FVC": r"[\nFVCe]{4}\s+[\[\(\{c]{1,2}[IL]{1,2}[\]\)\}J]{1,2}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)[\s+t%&36s]{1,3}([\d.,Olt~-]+)\s+([\d.,Olt~-]+)[\s+t%&36s]{1,3}([\d.,Olt~-]+)[\s+t%&36s]{2}",
                 "FEV1": r"[\nFEVc]{4}\s+1\s+[\[\(\{c]{1,2}[IL]{1,2}[\]\)\}J]{1,2}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)[\s+t%&36s]{1,3}([\d.,Olt~-]+)\s+([\d.,Olt~-]+)[\s+t%&36s]{1,3}([\d.,Olt~-]+)[\s+%]{2}",
@@ -95,7 +95,7 @@ OLD_ONLY_SPIROMETRY_SPECIFIC_REGEX_FIELDS = {
             }
 
 OLD_WITHOUT_POST_SPECIFIC_REGEX_FIELDS = {
-            "Format": FORMATS.OLD.value.WITHOUT_POST,
+            "Format": FORMATS.OLD.value.ONLY_SPIROMETRY_WITHOUT_POST,
             "Date": r"Date (\b\d{6}\b)",
             "FVC": r"[\nFVCe]{4}\s+[\[\(\{c]{1,2}[IL]+[\]\)\}]\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)[\s+t%&36s]{2}",
             "FEV1": r"[\nFEVc]{4}\s+1\s+[\[\(\{c]{1,2}[IL]{1,2}[\]\)\}J]{1,2}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)[\s+t%&36s]{2}",
@@ -222,10 +222,9 @@ EXPAND_PRED_PRE_PERCENT_FIELDS = ["VC", "IC", "ERV", "ITGV", "RV", "TLC", "SR to
 
 DATABASE_FILE_NAME = "copd_extracted_data_trial.xlsx"
 
-NEW_SPIROMETRY_FULL_IDENTIFIER = "[\nTLCOk0e\(\[\{HB\)\]\}]{8,11}"
-WITH_POST_IDENTIFIER = "\s+[POST075]{3,6}\s+"
+NEW_SPIROMETRY_FULL_IDENTIFIER = r"[\nTLCOk0e\(\[\{HB\)\]\}]{8,11}"
+WITH_POST_IDENTIFIER = r"\s+[POST075]{3,6}\s+"
 NEW_ONLY_SPIROMETRY_WITHOUT_POST_FORMAT_IDENTIFIER = r"Ref\s+Pre\s+[t%7xRef]{4,6}\s+Z"
-NEW_ONLY_SPIROMETRY_WITH_POST_FORMAT_IDENTIFIER = r"[t%s&x7ksRef]{4,6}\s+[Post]{3,6}\s+[t%s&xks7Ref]{4,6}\s+"
 
 NEW_NUMERIC_VALIDATE_FIELDS = ["FVC", "FEV1", "PEF",  "MEF 75/25", "MEF50", "MEF25", "MEF75",]
 
