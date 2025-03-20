@@ -172,5 +172,5 @@ def get_data_from_folder(folder_path):
         f.write(debugging_data)
 
 
-folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\test"
+folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\new"
 get_data_from_folder(folder_path)

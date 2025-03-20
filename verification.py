@@ -34,8 +34,17 @@ def validate_all(validation_errors, value_name, value):
 
     return validation_errors
 
+def get_dchange_values(value):
+    if value.count(' ') == 3:
+        _, pre, post, dchange = value.split(' ')
+    else:
+        pre, post, dchange = value.split(' ')
 
-def validate_only_dhcange(validation_errors, value_name, pre, post, dchange):
+    return pre, post, dchange
+
+
+def validate_only_dhcange(validation_errors, value_name, value):
+    pre, post, dchange = get_dchange_values(value)
     if not validate_dchange(float(pre), float(post), float(dchange)):
         validation_errors += "Failed dchange validation for {}, ".format(value_name)
 
@@ -108,7 +117,7 @@ def verify_numeric_results(value_name, value):
         return "No value to validate for {},".format(value_name)
     try:
         if value_name in ONLY_DCHANGE_VALIDATIONS_FIELDS:
-            validation_errors += validate_only_dhcange(validation_errors, value_name, *value.split(' '))
+            validation_errors += validate_only_dhcange(validation_errors, value_name, value)
         elif value.count(' ') == 2 or value.count(' ') == 3:
             validation_errors += validate_only_pre_pred(validation_errors, value_name, value)
         else:

@@ -220,7 +220,7 @@ ROUND_ERROR_LEEWAY = 1.1
 
 EXPAND_PRED_PRE_PERCENT_FIELDS = ["VC", "IC", "ERV", "ITGV", "RV", "TLC", "SR tot", "SG tot", "DLCO SB", "DLCOc SB",
                                   "DLCO/VA", "DLCOc/V", \
-                                  "MVV", "RV % TLC", "ITGV % TLC"]
+                                  "MVV", "RV % TLC", "ITGV % TLC", "VA", "sRAW", "RAW", "GAW"]
 
 DATABASE_FILE_NAME = "copd_extracted_data_trial.xlsx"
 

@@ -1,7 +1,7 @@
 import pandas as pd
 
 from consts import DATABASE_FILE_NAME, ONLY_DCHANGE_VALIDATIONS_FIELDS, NUMERIC_WITH_POST_FIELDS, \
-    EXPAND_PRED_PRE_PERCENT_FIELDS
+    EXPAND_PRED_PRE_PERCENT_FIELDS, NEW_NUMERIC_VALIDATE_FIELDS
 
 
 def expand_full_numeric_row(data, key):
@@ -140,7 +140,7 @@ def expand_data_keys(data):
             data = expand_pre_post_dchange(data, key)
         elif key in EXPAND_PRED_PRE_PERCENT_FIELDS:
             data = expand_pred_pre_percent(data, key)
-        elif key in NUMERIC_WITH_POST_FIELDS:
+        elif key in NUMERIC_WITH_POST_FIELDS or key in NEW_NUMERIC_VALIDATE_FIELDS:
             data = expand_full_numeric_row(data, key)
         elif key == "ID":
             data[key] = add_id_control_digit(data[key])
