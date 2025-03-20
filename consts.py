@@ -135,7 +135,7 @@ BASE_NEW_REGEX_FIELDS = {
     "BMI": r"[BMIl:; ]{3,6} ([\d.,Olt~-]+) k",
     "Ethnicity": r"[Ethnicity: ]{8,11} ([\w\s]+)\n",
     "Date": r"[Dateic:]{3,5} ([\d]{2})[/1]([\d]{2})[/1]([\d]{4})\s+",
-    "Spo2": r"[o02=-]{3,5}(\b\d{2,3}\b)",
+    "Spo2": r"[po02=-]{3,5}(\b\d{2,3}\b)",
     "Smoker": r"[Smo0kecr=-]{6,8}(Yes|No)",
     "Stage": r"[Stagec=-]{5,7}(\d+)",
 }
@@ -145,12 +145,12 @@ NEW_ONLY_SPIROMETRY_WITHOUT_POST_SPECIFIC_REGEX_FIELDS = {
     "FVC": r"[\nFVCex]{6}\s+[\[\(\{c]3[\]\)\}J][\s+IL1]{0,3}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "FEV1": r"[\nFEVc1il]{5}\s+[\[\(\{c]3[\]\)\}J][\s+IL1]{0,3}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "FEV1 % FVC": r"[\nFEVc1il/]{7,10}\s+[\[\(\{c]3[\]\)\}J][\s+t%&346s]{0,3}\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
-    "PEF": r"[\nPEFc]{4}\s+[\[\(\{c][3][\]\)\}J][\s+vi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
+    "PEF": r"[\nPEFc]{4}\s+[\[\(\{c][3][\]\)\}J][\s+vi></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "TEX": r"[\nt7%ex]{4}[\s+s]{0,2}\s+([\d.,Olt~-]+)\s+",
-    "MEF25": r"[\nMEFc25sz]{5,7}\s+[\[\(\{c][3][\]\)\}J][\s+vit/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
-    "MEF50": r"[\nMEFc50so]{5,7}\s+[\[\(\{c][3][\]\)\}J][\s+vti/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
-    "MEF75": r"[\nMEFc75s]{5,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
-    "MEF 75/25": r"[\nMEFc257sz-]{8,10}\s+[\[\(\{c][3][\]\)\}J][\s+tvi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF25": r"[\nMEFc25sz]{5,7}\s+[\[\(\{c][3][\]\)\}J][\s+vit></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF50": r"[\nMEFc50so]{5,7}\s+[\[\(\{c][3][\]\)\}J][\s+vti></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF75": r"[\nMEFc75s]{5,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF 75/25": r"[\nMEFc257sz-]{8,10}\s+[\[\(\{c][3][\]\)\}J][\s+tvi></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
 }
 
 NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS = {
@@ -160,10 +160,10 @@ NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS = {
     "FEV 1 % FVC": r"[\nFEVc1il/]{7,10}\s+[\[\(\{c]3[\]\)\}J][\s+t%&346s]{0,3}\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
     "PEF": r"[PEFc]{3,4}\s+[\[\(\{c][3][\]\)\}J][\s+vi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
     "TEX": r"[t7%ex]{3,4}[\s+s]{0,2}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
-    "MEF25": r"[MEFc25sz]{4,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
-    "MEF50": r"[MEFc50so]{4,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
-    "MEF75": r"[MEFc75s]{4,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
-    "MEF 75/25": r"[MEFc257sz-]{7,10}\s+[\[\(\{c][3][\]\)\}J][\s+tvi/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF25": r"[MEFc25sz]{4,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi<>/s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF50": r"[MEFc50so]{4,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF75": r"[MEFc75s]{4,7}\s+[\[\(\{c][3][\]\)\}J][\s+tvi></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
+    "MEF 75/25": r"[MEFc257sz-]{7,10}\s+[\[\(\{c][3][\]\)\}J][\s+tvi></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
 }
 
 NEW_FULL_WITH_POST_SPECIFIC_REGEX_FIELDS = {
@@ -179,12 +179,12 @@ NEW_FULL_WITH_POST_SPECIFIC_REGEX_FIELDS = {
     "RAW": r"[\nRAW]{3,5}\s+[\[\(\{c][3][\]\)\}J][\s+kpa'wxf_lsi1\(\)\[\]\{\}/]{0,11}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "GAW": r"[\nGAW]{3,5}\s+[\[\(\{c][3][\]\)\}J][\s+k'wpalsi1\(\)\[\]\{\}/]{0,11}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "sRAW": r"[\nsRAW]{5,6}\s+[\[\(\{c][3][\]\)\}J][\s+kpa*#s]{0,7}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
-    "DLCOc": r"[\nTLCO\(\[\{HB\)\]\}]{8,11}\s+[\[\(\{c][3][\]\)\}J][\s+molkpain14/\+]{0,15}[\s+>]{1,2}([\d.,Olt-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
-    "DLCOc/VA": r"[\nKCO\(\[\{HB\)\]\}]{7,10}\s+[\[\(\{c][3][\]\)\}J][\s+molkpain1/]{0,15}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
+    "DLCOc": r"[\nTLCO\(\[\{HB\)\]\}]{8,11}\s+[\[\(\{c][3][\]\)\}J][\s+molkp;?'ain14/\+-]{0,15}[\s+>]{1,2}([\d.,Olt-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
+    "DLCOc/VA": r"[\nKCO\(\[\{HB\)\]\}]{7,10}\s+[\[\(\{c][3][\]\)\}J][\s+molkp;?'ain1/]{0,15}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "VA": r"[\nVA]{2,4}\s+[\[\(\{c][25sz]{0,3}[\]\)\}J][\s+ivt1]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "VIN": r"[\nVIN1l]{4,6}[\s+li1]{0,4}\s+([\d.,Olt~-]+)\s+",
-    "HB": r"[\nHB]{2,4}[\s+gdl1i/]{0,6}\s+([\d.,Olt~-]+)\s+",
-    "tdiff": r"[\n\s+tdif.,]{6,10}[\s+s5]{0,4}\s+([\d.,Olt~-]+)\s+",
+    "HB": r"[\nHB]{2,4}[\s+gsdl1i/]{0,6}\s+([\d.,Olt~-]+)\s+",
+    "tdiff": r"[\n\s+tdif.,:]{6,10}[\s+s5]{0,4}\s+([\d.,Olt~-]+)\s+",
     "co-hb": r"[\ncohb=-]{5,8}[\s+t%&36s]{0,4}\s+([\dOlt~-]+)\s+",
 }
 

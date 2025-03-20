@@ -140,7 +140,7 @@ def extract_text(text):
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 if field not in TEXT_FIELDS:
-                    data[field] = " ".join(match.groups()).lower().replace("o","0").replace("l","1").replace(",", ".").replace("~", "-")
+                    data[field] = " ".join(match.groups()).lower().replace("o","0").replace("l","1").replace(",", ".").replace("~", "-").replace('..', '.')
                 else:
                     data[field] = " ".join(match.groups())
             else:
@@ -161,7 +161,7 @@ def get_data_from_folder(folder_path):
         if file.endswith(".pdf"):
             pdf_path = os.path.join(folder_path, file)
             img_path = convert_pdf_to_jpegs(pdf_path)
-            data, value, text, _ = analyze_images(img_path, base_threshold_level=180, num_of_thresholds=45)
+            data, value, text, _ = analyze_images(img_path, base_threshold_level=180, num_of_thresholds=35)
             debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
             debugging_data += (text + "\n\n")
             t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
