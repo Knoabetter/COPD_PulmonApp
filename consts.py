@@ -144,7 +144,7 @@ NEW_ONLY_SPIROMETRY_WITHOUT_POST_SPECIFIC_REGEX_FIELDS = {
     "Format": FORMATS.NEW.value.ONLY_SPIROMETRY_WITHOUT_POST,
     "FVC": r"[\nFVCex]{6}\s+[\[\(\{c]3[\]\)\}J][\s+IL1]{0,3}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "FEV1": r"[\nFEVc1il]{5}\s+[\[\(\{c]3[\]\)\}J][\s+IL1]{0,3}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
-    "FEV1 % FVC": r"[\nFEVc1il/]{7,10}\s+[\[\(\{c]3[\]\)\}J][\s+t%&346s]{0,3}\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
+    "FEV 1 % FVC": r"[\nFEVc1il/]{7,10}\s+[\[\(\{c]3[\]\)\}J][\s+t%&346s]{0,3}\s+([\dOlt~-]+)\s+([\dOlt~-]+)\s+",
     "PEF": r"[\nPEFc]{4}\s+[\[\(\{c][3][\]\)\}J][\s+vi></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",
     "TEX": r"[\nt7%ex]{4}[\s+s]{0,2}\s+([\d.,Olt~-]+)\s+",
     "MEF25": r"[\nMEFc25sz]{5,7}\s+[\[\(\{c][3][\]\)\}J][\s+vit></s]{0,4}\s+([\d.,Olt~-]+)\s+([\d.,Olt~-]+)\s+([\dOlt~-]+)\s+",

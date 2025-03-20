@@ -21,7 +21,7 @@ def convert_pdf_to_jpegs(file_path: str) -> [str]:
 
     return images_path
 
-def group_easyocr_results_by_row(ocr_results, y_threshold=13):
+def group_easyocr_results_by_row(ocr_results, y_threshold=15):
     """
     Groups EasyOCR results into rows, sorting each row's items from left to right.
 
