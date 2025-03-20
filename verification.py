@@ -91,9 +91,9 @@ def verify_numeric_results(value_name, value, file_format):
                 validation_errors += validate_only_dhcange(validation_errors, value_name, *value.split(' '))
             else:
                 validation_errors += validate_only_pre_pred(validation_errors, value_name, *value.split(' '))
-        elif file_format == FORMATS.OLD.value.WITHOUT_POST:
+        elif file_format == FORMATS.OLD.value.ONLY_SPIROMETRY_WITHOUT_POST:
             validation_errors += validate_only_pre_pred(validation_errors, value_name, *value.split(' '))
-        elif file_format == FORMATS.OLD.value.ONLY_SPIROMETRY:
+        elif file_format == FORMATS.OLD.value.ONLY_SPIROMETRY_WITH_POST:
             pred, _, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
             validation_errors += validate_all(validation_errors, value_name, pred, pre, pred_pre_percent, post,
                                               pred_post_percent, dchange)
