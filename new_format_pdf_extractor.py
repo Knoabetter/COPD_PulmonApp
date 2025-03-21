@@ -108,7 +108,7 @@ def analyze_images(images_path, base_threshold_level=170, num_of_thresholds=40):
     return best_threshold
 
 def add_format_parameters(text):
-    parameters = BASE_NEW_REGEX_FIELDS
+    parameters = {}
 
     if re.findall(WITH_POST_IDENTIFIER, text, re.IGNORECASE):
         parameters.update(NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS)
@@ -123,7 +123,7 @@ def add_format_parameters(text):
 
 def get_regex_params(text):
     # Regex patterns for common fields
-    patterns = BASE_NEW_REGEX_FIELDS
+    patterns = BASE_NEW_REGEX_FIELDS.copy()
 
     patterns.update(add_format_parameters(text))
 
@@ -172,5 +172,5 @@ def get_data_from_folder(folder_path):
         f.write(debugging_data)
 
 
-folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\new"
+folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\test"
 get_data_from_folder(folder_path)
