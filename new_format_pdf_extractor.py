@@ -149,6 +149,7 @@ def extract_text(text):
             data["Format"] = patterns["Format"]
 
     data["Validator"] = ""
+    data["Missing"] = ""
     return data, sum(1 for value in data.values() if value is not None), len(patterns.keys())
 
 def delete_images(images_path):

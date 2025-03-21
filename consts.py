@@ -126,7 +126,7 @@ IMPOSSIBLE_REGEX_FIELDS = {
 }
 
 BASE_NEW_REGEX_FIELDS = {
-    "ID": r"(?:(?:\n)|[IDfV)l>:]{2,6})\s*([\d]{7,8})\s+[vw]",
+    "ID": r"(?:(?:\n)|[IDfV)l>:]{2,6})\s*([\d]{6,8})\s+[vw]",
     "Date of Birth": r"[Date of birth;:]{9,13} ([\d]{2}[/1][\d]{2}[/1][\d]{4})\s+",
     "Sex": r"[Gender':]{5,8} (F|M)",
     "Height": r"[Heaight:]{5,8} ([\dOlt~-]{3}) [coe]m",

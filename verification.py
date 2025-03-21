@@ -34,6 +34,7 @@ def validate_all(validation_errors, value_name, value):
 
     return validation_errors
 
+
 def get_dchange_values(value):
     if value.count(' ') == 3:
         _, pre, post, dchange = value.split(' ')
@@ -111,10 +112,23 @@ def check_and_fix_missing_after_dot_data(value_name, value):
     return validation_errors, params
 
 
+def remove_mistaken_missing_values_warning(missing_values):
+    messages_to_remove = [
+        "No value to validate for MEF25,",
+        "No value to validate for MEF50,",
+        "No value to validate for MEF75,"
+    ]
+
+    if all(msg in missing_values for msg in messages_to_remove):
+        for msg in messages_to_remove:
+            missing_values = missing_values.replace(msg, "")
+
+    return missing_values
+
 def verify_numeric_results(value_name, value):
     validation_errors = ""
     if value is None:
-        return "No value to validate for {},".format(value_name)
+        return "", "No value to validate for {},".format(value_name)
     try:
         if value_name in ONLY_DCHANGE_VALIDATIONS_FIELDS:
             validation_errors += validate_only_dhcange(validation_errors, value_name, value)
@@ -125,22 +139,26 @@ def verify_numeric_results(value_name, value):
     except Exception as e:
         print(e)
         validation_errors += "Failed numeric validation for {}, ".format(value_name)
-        return validation_errors
+        return validation_errors, ""
 
-    return validation_errors
+    return validation_errors, ""
 
 
 def verify_data_results(data, numeric_fields_to_validate):
     for key in data.keys():
         if key in numeric_fields_to_validate:
-            validation_errors = verify_numeric_results(key, data[key])
+            validation_errors, missing_values = verify_numeric_results(key, data[key])
 
             if data[key] is not None and len([item for item in data[key].split(" ") if item.endswith('.')]) != 0:
                 validation_errors += "Failed missing after dot validation for {}, ".format(key)
 
             data["Validator"] += validation_errors
+            data["Missing"] += missing_values
 
     if data["Validator"] == "":
         data["Validator"] = "OK"
 
+    data["Missing"] = remove_mistaken_missing_values_warning(data["Missing"])
+
     return data
+
