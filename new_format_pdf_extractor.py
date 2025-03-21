@@ -3,6 +3,7 @@ import re
 
 import cv2
 import easyocr
+import logging
 from pdf2image import convert_from_path
 
 from consts import *
@@ -173,5 +174,6 @@ def get_data_from_folder(folder_path):
         f.write(debugging_data)
 
 
-folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\test"
+folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\new"
+logging.getLogger("easyocr").setLevel(logging.ERROR)
 get_data_from_folder(folder_path)

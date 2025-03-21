@@ -125,6 +125,7 @@ def remove_mistaken_missing_values_warning(missing_values):
 
     return missing_values
 
+
 def verify_numeric_results(value_name, value):
     validation_errors = ""
     if value is None:

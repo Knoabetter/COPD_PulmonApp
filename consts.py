@@ -129,7 +129,7 @@ BASE_NEW_REGEX_FIELDS = {
     "ID": r"(?:(?:\n)|[IDfV)l>:]{2,6})\s*([\d]{6,8})\s+[vw]",
     "Date of Birth": r"[Date of birth;:]{9,13} ([\d]{2}[/1][\d]{2}[/1][\d]{4})\s+",
     "Sex": r"[Gender':]{5,8} (F|M)",
-    "Height": r"[Heaight:]{5,8} ([\dOlt~-]{3}) [coe]m",
+    "Height": r"[Heairght:]{5,8} ([\dOlt~-]{3}) [coe]m",
     "Weight": r"[Weairght: ]{5,8} ([\d.,Olt~-]{2,3}) [kg]",
     "Age": r"[Age:;. ]{3,6} ([\d]+) Y",
     "BMI": r"[BMIl:; ]{3,6} ([\d.,Olt~-]+) k",
@@ -215,10 +215,10 @@ NUMERIC_VALIDATE_FIELDS = ["VC", "IC", "ERV", "ITGV", "RV", "TLC", "SR tot", "SG
                            "DLCOc/V", "FVC", "FEV1", "PEF", "MEF 75/25", "MEF50", "MEF25", "RV % TLC", "ITGV % TLC", ]
 ONLY_DCHANGE_VALIDATIONS_FIELDS = ["FEV6", "PIF", "FEV1 % FEV6", "FEV 1 % FVC", "TEX"]
 
-NUMERIC_WITH_POST_FIELDS = ["FVC", "FEV1", "PEF", "MEF 75/25", "MEF50", "MEF25", "MEF75"]
+NUMERIC_WITH_POST_FIELDS = ["FVC", "FEV1", "PEF", "MEF 75/25", "MEF50", "MEF25", "MEF75", "ERV"]
 ROUND_ERROR_LEEWAY = 1.1
 
-EXPAND_PRED_PRE_PERCENT_FIELDS = ["VC", "IC", "ERV", "ITGV", "RV", "TLC", "SR tot", "SG tot", "DLCO SB", "DLCOc SB",
+EXPAND_PRED_PRE_PERCENT_FIELDS = ["VC", "IC", "ITGV", "RV", "TLC", "SR tot", "SG tot", "DLCO SB", "DLCOc SB",
                                   "DLCO/VA", "DLCOc/V", \
                                   "MVV", "RV % TLC", "ITGV % TLC", "VA", "sRAW", "RAW", "GAW"]
 

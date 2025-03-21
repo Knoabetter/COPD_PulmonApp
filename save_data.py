@@ -13,7 +13,7 @@ def expand_full_numeric_row(data, key):
         data[key + '_POST'] = None
         data[key + '_POST_PERCENT'] = None
         data[key + '_DCHANGE'] = None
-    elif len(data[key].split(' ')) == 3:
+    elif data[key].count(' ') == 2:
         pred, pre, pred_pre_percent = data[key].split(' ')
         data[key + '_PRED'] = pred
         data[key + '_LLN'] = None
@@ -22,7 +22,7 @@ def expand_full_numeric_row(data, key):
         data[key + '_POST'] = None
         data[key + '_POST_PERCENT'] = None
         data[key + '_DCHANGE'] = None
-    elif len(data[key].split(' ')) == 4:
+    elif data[key].count(' ') == 3:
         pred, LLN, pre, pred_pre_percent = data[key].split(' ')
         data[key + '_PRED'] = pred
         data[key + '_LLN'] = LLN
@@ -31,16 +31,17 @@ def expand_full_numeric_row(data, key):
         data[key + '_POST'] = None
         data[key + '_POST_PERCENT'] = None
         data[key + '_DCHANGE'] = None
-    elif len(data[key].split(' ')) == 6:
+    elif data[key].count(' ') == 5:
         pred, pre, pred_pre_percent, post, pred_post_percent, dchange = data[key].split(' ')
 
         data[key + '_PRED'] = pred
+        data[key + '_LLN'] = None
         data[key + '_PRE'] = pre
         data[key + '_PRE_PERCENT'] = pred_pre_percent
         data[key + '_POST'] = post
         data[key + '_POST_PERCENT'] = pred_post_percent
         data[key + '_DCHANGE'] = dchange
-    elif len(data[key].split(' ')) == 7:
+    elif data[key].count(' ') == 6:
         pred, LLN, pre, pred_pre_percent, post, pred_post_percent, dchange = data[key].split(' ')
 
         data[key + '_PRED'] = pred
@@ -61,14 +62,21 @@ def expand_pred_pre_percent(data, key):
         data[key + '_LLN'] = None
         data[key + '_PRE'] = None
         data[key + '_PRE_PERCENT'] = None
-    elif len(data[key].split(' ')) == 2:
+    elif data[key].count(' ') == 1:
         pred, LLN = data[key].split(' ')
 
         data[key + '_PRED'] = pred
         data[key + '_LLN'] = LLN
         data[key + '_PRE'] = None
         data[key + '_PRE_PERCENT'] = None
-    elif len(data[key].split(' ')) == 4:
+    elif data[key].count(' ') == 2:
+        pred, pre, pred_pre_percent = data[key].split(' ')
+
+        data[key + '_PRED'] = pred
+        data[key + '_LLN'] = None
+        data[key + '_PRE'] = pre
+        data[key + '_PRE_PERCENT'] = pred_pre_percent
+    elif data[key].count(' ') == 3:
         pred, LLN, pre, pred_pre_percent = data[key].split(' ')
 
         data[key + '_PRED'] = pred
@@ -85,13 +93,23 @@ def expand_pre_post_dchange(data, key):
         data[key + '_PRE'] = None
         data[key + '_POST'] = None
         data[key + '_DCHANGE'] = None
-    elif len(data[key].split(' ')) == 3:
+    elif data[key].count(' ') == 0:
+        data[key + '_PRE'] = data[key]
+        data[key + '_POST'] = None
+        data[key + '_DCHANGE'] = None
+    elif data[key].count(' ') == 1:
+        pre, post = data[key].split(' ')
+
+        data[key + '_PRE'] = pre
+        data[key + '_POST'] = post
+        data[key + '_DCHANGE'] = None
+    elif data[key].count(' ') == 2:
         pre, post, dchange = data[key].split(' ')
 
         data[key + '_PRE'] = pre
         data[key + '_POST'] = post
         data[key + '_DCHANGE'] = dchange
-    elif len(data[key].split(' ')) == 4:
+    elif data[key].count(' ') == 3:
         pred, pre, post, dchange = data[key].split(' ')
 
         data[key + '_PRED'] = pred
