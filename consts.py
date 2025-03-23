@@ -228,6 +228,9 @@ NEW_SPIROMETRY_FULL_IDENTIFIER = r"[\nTLCOk0e\(\[\{HB\)\]\}]{8,11}"
 WITH_POST_IDENTIFIER = r"\s+[POST075]{3,6}\s+"
 NEW_ONLY_SPIROMETRY_WITHOUT_POST_FORMAT_IDENTIFIER = r"Ref\s+Pre\s+[t%7xRef]{4,6}\s+Z"
 
+NEW_FORMAT_IDENTIFIER = r"[Refct%]{3,5}\s+[Prec]{3,4}"
+OLD_FORMAT_IDENTIFIER =r"[Precd]{3,4}\s+[LIN1]{3,4}\s+P"
+
 NEW_NUMERIC_VALIDATE_FIELDS = ["FVC", "FEV1", "PEF", "MEF 75/25", "MEF50", "MEF25", "MEF75", "ERV", "VC", "IC", "TGV",
                                "RV", "TLC", "RV % TLC", "TGV % TLC", "RAW", "GAW", "sRAW", "DLCOc", "DLCOc/VA", "VA"]
 

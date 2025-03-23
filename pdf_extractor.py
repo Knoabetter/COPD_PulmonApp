@@ -26,7 +26,6 @@ def get_recognized_text(image_path, threshold=170):
     text = ""
 
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
 

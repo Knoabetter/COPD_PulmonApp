@@ -5,6 +5,7 @@ import cv2
 import easyocr
 import logging
 from pdf2image import convert_from_path
+import pytesseract
 
 from consts import *
 from save_data import append_data
@@ -74,7 +75,7 @@ def group_easyocr_results_by_row(ocr_results, y_threshold=15):
     organized_rows = '\n'.join([' '.join([text for _, text, _, _ in row]) for row in rows])
     return organized_rows
 
-def get_recognized_text(image_path, threshold=170):
+def easyocr_get_recognized_text(image_path, threshold=170):
     text = ""
 
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -89,14 +90,26 @@ def get_recognized_text(image_path, threshold=170):
 
     return text
 
-def analyze_images(images_path, base_threshold_level=170, num_of_thresholds=40):
+def tesseract_get_recognized_text(image_path, threshold=170):
+    text = ""
+
+    gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+
+    text += pytesseract.image_to_string(binary)
+    text += "\n"
+
+    return text
+
+def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_thresholds=40):
 
     best_threshold = ({}, 0, "", -1)
 
     for i in range(base_threshold_level + 1, base_threshold_level + num_of_thresholds + 1, 3):
         text = ""
         for image_path in images_path:
-            text += get_recognized_text(image_path, i)
+            text += get_text_func(image_path, i)
 
         data, value, num = extract_text(text)
 
@@ -108,25 +121,40 @@ def analyze_images(images_path, base_threshold_level=170, num_of_thresholds=40):
 
     return best_threshold
 
-def add_format_parameters(text):
+def add_format_parameters(text, format):
     parameters = {}
 
-    if re.findall(WITH_POST_IDENTIFIER, text, re.IGNORECASE):
-        parameters.update(NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS)
-        if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
-            parameters.update(NEW_FULL_WITH_POST_SPECIFIC_REGEX_FIELDS)
-    elif re.search(NEW_ONLY_SPIROMETRY_WITHOUT_POST_FORMAT_IDENTIFIER, text, re.IGNORECASE):
-        parameters.update(NEW_ONLY_SPIROMETRY_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
-        if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
-            parameters.update(NEW_FULL_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
+    if format == FORMATS.NEW:
+        if re.findall(WITH_POST_IDENTIFIER, text, re.IGNORECASE):
+            parameters.update(NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS)
+            if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
+                parameters.update(NEW_FULL_WITH_POST_SPECIFIC_REGEX_FIELDS)
+        elif re.search(NEW_ONLY_SPIROMETRY_WITHOUT_POST_FORMAT_IDENTIFIER, text, re.IGNORECASE):
+            parameters.update(NEW_ONLY_SPIROMETRY_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
+            if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
+                parameters.update(NEW_FULL_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
 
+    elif format == FORMATS.OLD:
+        if re.search(r"(Pred\s+LLN\s+Pre\s+Pre[t%]Pred\s+Post)", text, re.IGNORECASE):
+            if re.search(
+                    r"[\nVCE]{3}\s+[\[\(\{c]{1,2}[IL]+[\]\)\}J]{1,2}\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)[\s+%&3¢]{2}",
+                    text, re.IGNORECASE):
+                parameters.update(OLD_FULL_BASE_REGEX_FIELDS)
+                parameters.update(OLD_FULL_SPECIFIC_REGEX_FIELDS)
+            else:
+                parameters.update(OLD_ONLY_SPIROMETRY_SPECIFIC_REGEX_FIELDS)
+        elif re.search(r"(Pred\s+LLN\s+Pre\s+Pre[t%]Pred)", text, re.IGNORECASE):
+            parameters.update(OLD_FULL_BASE_REGEX_FIELDS)
+            parameters.update(OLD_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
     return parameters
 
 def get_regex_params(text):
-    # Regex patterns for common fields
-    patterns = BASE_NEW_REGEX_FIELDS.copy()
-
-    patterns.update(add_format_parameters(text))
+    if re.findall(OLD_FORMAT_IDENTIFIER, text, re.IGNORECASE):
+        patterns = BASE_OLD_REGEX_FIELDS.copy()
+        patterns.update(add_format_parameters(text, FORMATS.OLD))
+    else:
+        patterns = BASE_NEW_REGEX_FIELDS.copy()
+        patterns.update(add_format_parameters(text, FORMATS.NEW))
 
     return patterns
 
@@ -151,11 +179,32 @@ def extract_text(text):
 
     data["Validator"] = ""
     data["Missing"] = ""
-    return data, sum(1 for value in data.values() if value is not None), len(patterns.keys())
+    return data, sum(1 for value in data.values() if value is not None), len(data.keys())
 
 def delete_images(images_path):
     for image_path in images_path:
         os.remove(image_path)
+
+def get_new_or_old_format_from_text(text):
+    new_identifier = re.findall(NEW_FORMAT_IDENTIFIER, text, re.IGNORECASE)
+    old_identifier = re.findall(OLD_FORMAT_IDENTIFIER, text, re.IGNORECASE)
+
+    if old_identifier and not new_identifier:
+        print("Old format detected, using tesseract")
+        return tesseract_get_recognized_text, 150, 70
+    elif new_identifier and not old_identifier:
+        print("New format identifier detected, using easyocr")
+    else:
+        print("Couldn't detect format. Defaulting to easyocr")
+
+    return easyocr_get_recognized_text, 180, 35
+
+def separate_new_from_old_format(images_path):
+    text = ""
+    for image_path in images_path:
+        text += easyocr_get_recognized_text(image_path, 180)
+
+    return get_new_or_old_format_from_text(text)
 
 def get_data_from_folder(folder_path):
     debugging_data = ""
@@ -163,7 +212,8 @@ def get_data_from_folder(folder_path):
         if file.endswith(".pdf"):
             pdf_path = os.path.join(folder_path, file)
             img_path = convert_pdf_to_jpegs(pdf_path)
-            data, value, text, _ = analyze_images(img_path, base_threshold_level=180, num_of_thresholds=35)
+            get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
+            data, value, text, _ = analyze_images(img_path, get_text_func, base_threshold_level=base_thresh, num_of_thresholds=num_of_thresh)
             debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
             debugging_data += (text + "\n\n")
             t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
@@ -174,6 +224,6 @@ def get_data_from_folder(folder_path):
         f.write(debugging_data)
 
 
-folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\new"
+folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\test"
 logging.getLogger("easyocr").setLevel(logging.ERROR)
 get_data_from_folder(folder_path)
