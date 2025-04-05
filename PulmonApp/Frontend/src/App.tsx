@@ -60,18 +60,14 @@ function App() {
     return <div className="container mt-5"><p>Loading...</p></div>;
   }
 
-  return (
-    <div className="container">
-      {authState.isAuthenticated ? (
+    return (
+      <div className="container">
         <Dashboard 
-          username={authState.username!} 
-          onLogout={handleLogout} 
+          username="dev_user" // mock username for testing
+          onLogout={() => console.log("Logout clicked (dev mode)")} 
         />
-      ) : (
-        <LoginForm onLoginSuccess={handleLoginSuccess} />
-      )}
-    </div>
-  );
+      </div>
+    );   
 }
 
 export default App

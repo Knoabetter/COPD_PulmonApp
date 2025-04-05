@@ -12,6 +12,9 @@ interface DashboardProps {
 
 function Dashboard({ username, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const getNavLinkClass = (tab: string): string => {
+    return `nav-link px-3 py-2 ${activeTab === tab ? 'active fw-bold' : ''}`;
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -25,8 +28,8 @@ function Dashboard({ username, onLogout }: DashboardProps) {
         return <UserProfile username={username} onLogout={onLogout} />;
       default:
         return (
-          <div className="jumbotron bg-light p-5 rounded">
-            <h1>Welcome to Pulmonary Institute Dashboard</h1>
+          <div className="jumbotron bg-light p-5 rounded shadow-sm border">
+            <h1 className="display-5 fw-bold">Welcome to Pulmonary Institute Dashboard</h1>
             <p className="lead">
               This application helps manage spirometry test results and provides key insights for physicians.
             </p>
@@ -39,17 +42,17 @@ function Dashboard({ username, onLogout }: DashboardProps) {
 
   return (
     <div>
-      <nav className="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
         <div className="container-fluid">
           <a className="navbar-brand" href="#!">Pulmonary Institute</a>
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <button className="navbar-toggler btn-lg" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span className="navbar-toggler-icon"></span>
           </button>
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav">
               <li className="nav-item">
                 <a 
-                  className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`} 
+                  className={getNavLinkClass('dashboard')}
                   href="#!"
                   onClick={(e) => {e.preventDefault(); setActiveTab('dashboard')}}
                 >
@@ -57,8 +60,8 @@ function Dashboard({ username, onLogout }: DashboardProps) {
                 </a>
               </li>
               <li className="nav-item">
-                <a 
-                  className={`nav-link ${activeTab === 'patients' ? 'active' : ''}`} 
+                <a
+                  className={getNavLinkClass('patients')}
                   href="#!"
                   onClick={(e) => {e.preventDefault(); setActiveTab('patients')}}
                 >
@@ -67,16 +70,16 @@ function Dashboard({ username, onLogout }: DashboardProps) {
               </li>
               <li className="nav-item">
                 <a 
-                  className={`nav-link ${activeTab === 'upload' ? 'active' : ''}`} 
+                  className={getNavLinkClass('upload')} 
                   href="#!"
                   onClick={(e) => {e.preventDefault(); setActiveTab('upload')}}
                 >
                   Upload Tests
                 </a>
-              </li>
+              </li> 
               <li className="nav-item">
                 <a 
-                  className={`nav-link ${activeTab === 'results' ? 'active' : ''}`} 
+                  className={getNavLinkClass('results')}  
                   href="#!"
                   onClick={(e) => {e.preventDefault(); setActiveTab('results')}}
                 >

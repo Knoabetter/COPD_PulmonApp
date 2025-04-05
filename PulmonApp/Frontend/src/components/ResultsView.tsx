@@ -1,16 +1,81 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
+
+interface Patient {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface TestResult {
+  id: string;
+  datePre: string;
+  fev1Pre: string;
+  fev1PrePercent: string;
+  fvcPre: string;
+  fvcPrePercent: string;
+  fev1FvcPre: string;
+  pefPre: string;
+  pefPrePercent: string;
+}
 
 function ResultsView() {
+  const [data, setData] = useState<any[]>([]);
   const [selectedPatient, setSelectedPatient] = useState('');
   const [selectedTest, setSelectedTest] = useState('');
   
-  // Placeholder test data - would come from API
-  const tests = [
-    { id: 1, date: '2025-03-15', type: 'Spirometry' },
-    { id: 2, date: '2025-02-20', type: 'Spirometry' },
-    { id: 3, date: '2024-12-10', type: 'Spirometry' },
-  ];
+  // Load data from Excel - same file as PatientList
+  useEffect(() => {
+    fetch('/CopyExtractedDataNoID.xlsx')
+      .then((res) => res.arrayBuffer())
+      .then((arrayBuffer) => {
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        console.log("Parsed Excel Data:", jsonData);
+        setData(jsonData);
+      })
+      .catch((error) => {
+        console.error("Error reading Excel file:", error);
+      });
+  }, []);
+
+  // Get unique patients from the data
+  const patients = data.map((row, index) => ({
+    id: index.toString(),
+    firstName: row['First Name'] || '',
+    lastName: row['Last Name'] || '',
+    fullName: `${row['First Name'] || ''} ${row['Last Name'] || ''}`,
+    idNumber: row['ID'] || ''
+  }));
+
+  // Filter unique patients by removing duplicates
+  const uniquePatients = patients.filter((patient, index, self) => 
+    index === self.findIndex(p => p.fullName === patient.fullName && p.idNumber === patient.idNumber)
+  );
+
+  // Get tests for selected patient
+  const patientTests = selectedPatient ? 
+    data.filter((row, index) => index.toString() === selectedPatient || 
+      (row['First Name'] === patients[parseInt(selectedPatient)]?.firstName && 
+       row['Last Name'] === patients[parseInt(selectedPatient)]?.lastName)) : 
+    [];
+
+  // Get the selected test details
+  const selectedTestDetails = patientTests.find((_, index) => index.toString() === selectedTest);
+
+  const getAssessment = (fev1Percent: number, fvcPercent: number, ratio: number) => {
+    if (ratio < 0.7) {
+      if (fev1Percent >= 80) return { text: "Mild obstructive pattern", class: "alert-warning" };
+      if (fev1Percent >= 50) return { text: "Moderate obstructive pattern", class: "alert-warning" };
+      return { text: "Severe obstructive pattern", class: "alert-danger" };
+    }
+    
+    if (fvcPercent < 80) return { text: "Restrictive pattern", class: "alert-warning" };
+    
+    return { text: "Normal spirometry results", class: "alert-success" };
+  };
 
   return (
     <div className="card">
@@ -25,12 +90,17 @@ function ResultsView() {
               className="form-select" 
               id="patientSelect"
               value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
+              onChange={(e) => {
+                setSelectedPatient(e.target.value);
+                setSelectedTest('');
+              }}
             >
               <option value="">-- Select Patient --</option>
-              <option value="1">John Doe (ID: 123456789)</option>
-              <option value="2">Jane Smith (ID: 987654321)</option>
-              <option value="3">Robert Johnson (ID: 456789123)</option>
+              {uniquePatients.map(patient => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.fullName} (ID: {patient.idNumber})
+                </option>
+              ))}
             </select>
           </div>
           
@@ -44,16 +114,16 @@ function ResultsView() {
               disabled={!selectedPatient}
             >
               <option value="">-- Select Test --</option>
-              {tests.map(test => (
-                <option key={test.id} value={test.id}>
-                  {test.date} - {test.type}
+              {patientTests.map((test, index) => (
+                <option key={index} value={index.toString()}>
+                  {test['Date_PRE'] || 'Unknown Date'} - Spirometry
                 </option>
               ))}
             </select>
           </div>
         </div>
         
-        {selectedTest ? (
+        {selectedTestDetails ? (
           <div>
             <div className="row">
               <div className="col-md-6">
@@ -64,19 +134,22 @@ function ResultsView() {
                       <tbody>
                         <tr>
                           <th scope="row">FEV1</th>
-                          <td>3.5 L (85%)</td>
+                          <td>{selectedTestDetails['FEV1_PRE']} L ({selectedTestDetails['FEV1_PRE_PERCENT']}%)</td>
                         </tr>
                         <tr>
                           <th scope="row">FVC</th>
-                          <td>4.2 L (90%)</td>
+                          <td>{selectedTestDetails['FVC_PRE']} L ({selectedTestDetails['FVC_PRE_PERCENT']}%)</td>
                         </tr>
                         <tr>
                           <th scope="row">FEV1/FVC</th>
-                          <td>0.83 (95%)</td>
+                          <td>{selectedTestDetails['FEV 1 % FVC_PRE'] || 
+                               (selectedTestDetails['FEV1_PRE'] && selectedTestDetails['FVC_PRE'] ? 
+                                (parseFloat(selectedTestDetails['FEV1_PRE']) / 
+                                 parseFloat(selectedTestDetails['FVC_PRE'])).toFixed(2) : 'N/A')}</td>
                         </tr>
                         <tr>
                           <th scope="row">PEF</th>
-                          <td>9.1 L/s (88%)</td>
+                          <td>{selectedTestDetails['PEF_PRE']} L/s ({selectedTestDetails['PEF_PRE_PERCENT']}%)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -88,13 +161,32 @@ function ResultsView() {
                 <div className="card mb-4">
                   <div className="card-header">Assessment</div>
                   <div className="card-body">
-                    <div className="alert alert-success">
-                      Normal spirometry results
-                    </div>
-                    <p>
-                      All spirometry parameters are within normal range.
-                      No evidence of obstructive or restrictive ventilatory defects.
-                    </p>
+                    {(() => {
+                      const fev1Percent = parseFloat(selectedTestDetails['FEV1_PRE_PERCENT'] || '0');
+                      const fvcPercent = parseFloat(selectedTestDetails['FVC_PRE_PERCENT'] || '0');
+                      let ratio = parseFloat(selectedTestDetails['FEV 1 % FVC_PRE'] || '0');
+                      
+                      if (!ratio && selectedTestDetails['FEV1_PRE'] && selectedTestDetails['FVC_PRE']) {
+                        ratio = parseFloat(selectedTestDetails['FEV1_PRE']) / parseFloat(selectedTestDetails['FVC_PRE']);
+                      }
+                      
+                      const assessment = getAssessment(fev1Percent, fvcPercent, ratio);
+                      
+                      return (
+                        <>
+                          <div className={`alert ${assessment.class}`}>
+                            {assessment.text}
+                          </div>
+                          <p>
+                            {assessment.text === "Normal spirometry results" 
+                              ? 'All spirometry parameters are within normal range. No evidence of obstructive or restrictive ventilatory defects.'
+                              : assessment.text.includes('obstructive')
+                                ? 'Spirometry shows evidence of airflow limitation with reduced FEV1/FVC ratio.'
+                                : 'Spirometry shows reduced lung volumes with preserved FEV1/FVC ratio, suggesting a restrictive pattern.'}
+                          </p>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
