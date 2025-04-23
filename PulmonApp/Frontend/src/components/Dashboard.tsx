@@ -3,6 +3,7 @@ import PatientList from './PatientList';
 import TestUpload from './TestUpload';
 import ResultsView from './ResultsView';
 import UserProfile from './UserProfile';
+import * as XLSX from 'xlsx';
 import React from 'react';
 
 interface DashboardProps {
@@ -12,8 +13,25 @@ interface DashboardProps {
 
 function Dashboard({ username, onLogout }: DashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [data, setData] = useState<any[]>([]);
+
   const getNavLinkClass = (tab: string): string => {
     return `nav-link px-3 py-2 ${activeTab === tab ? 'active fw-bold' : ''}`;
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const binaryStr = event.target?.result;
+      const workbook = XLSX.read(binaryStr, { type: 'binary' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      setData(jsonData);
+    };
+    reader.readAsBinaryString(file);
   };
 
   const renderContent = () => {
@@ -21,7 +39,17 @@ function Dashboard({ username, onLogout }: DashboardProps) {
       case 'patients':
         return <PatientList />;
       case 'upload':
-        return <TestUpload />;
+        return (
+          <div>
+            <h2 className="text-xl mb-2">Upload COPD Data Sheet (.xlsx)</h2>
+            <input type="file" accept=".xlsx" onChange={handleFileUpload} className="mb-4" />
+            {data.length > 0 && (
+              <div className="bg-gray-100 p-4 rounded shadow max-h-96 overflow-auto">
+                <pre>{JSON.stringify(data, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        );
       case 'results':
         return <ResultsView />;
       case 'profile':
