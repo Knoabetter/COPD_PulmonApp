@@ -1,19 +1,44 @@
 import os
 import re
-
 import cv2
 import easyocr
 import logging
+import pandas as pd
+from typing import List
 from pdf2image import convert_from_path
 import pytesseract
-
+pytesseract.pytesseract.tesseract_cmd = os.environ.get('TESSERACT_PATH', 'tesseract')
 from consts import *
 from save_data import append_data
 from verification import verify_data_results
 
+def extract_file_paths_from_excel(excel_path: str = DATABASE_FILE_NAME, sheet_name: str = 0) -> List[str]:
+    """
+    Load an Excel file into a pandas DataFrame, extract values from the 'file path' column,
+    and return them as a list of strings.
+
+    @param excel_path: Path to the Excel file.
+    @param sheet_name: Sheet name or index (default is 0, the first sheet).
+    @return: List of strings from the 'file path' column.
+    """
+    try:
+        df = pd.read_excel(excel_path, sheet_name=sheet_name, usecols=["scan_path"])
+        return df['file path'].dropna().astype(str).tolist()
+    except Exception as e:
+        raise []
 
 def convert_pdf_to_jpegs(file_path: str) -> [str]:
-    pages = convert_from_path(file_path)
+    import pathlib
+    try:
+        pages = convert_from_path(file_path, poppler_path=os.environ.get('POPPLER_PATH', None))
+    except Exception as e:
+        msg = str(e)
+        if 'page count' in msg.lower() or 'pdfinfo' in msg.lower():
+            raise ValueError(
+                "Cannot read this PDF — it may be encrypted, password-protected, or use an unsupported format. "
+                "Please open the PDF in Adobe Acrobat or a PDF viewer and re-save it as a standard PDF before uploading."
+            ) from e
+        raise
     images_path = []
 
     for i, page in enumerate(pages):
@@ -124,7 +149,7 @@ def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_
 def add_format_parameters(text, format):
     parameters = {}
 
-    if format == FORMATS.NEW:
+    if format == FORMATS.NEW.FULL_WITH_POST or format == FORMATS.NEW.FULL_WITHOUT_POST or format == FORMATS.NEW.ONLY_SPIROMETRY_WITH_POST or format == FORMATS.NEW.ONLY_SPIROMETRY_WITHOUT_POST:
         if re.findall(WITH_POST_IDENTIFIER, text, re.IGNORECASE):
             parameters.update(NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS)
             if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
@@ -134,7 +159,7 @@ def add_format_parameters(text, format):
             if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
                 parameters.update(NEW_FULL_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
 
-    elif format == FORMATS.OLD:
+    elif format == FORMATS.OLD.FULL or format == FORMATS.OLD.ONLY_SPIROMETRY_WITH_POST or format == FORMATS.OLD.ONLY_SPIROMETRY_WITHOUT_POST:
         if re.search(r"(Pred\s+LLN\s+Pre\s+Pre[t%]Pred\s+Post)", text, re.IGNORECASE):
             if re.search(
                     r"[\nVCE]{3}\s+[\[\(\{c]{1,2}[IL]+[\]\)\}J]{1,2}\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)[\s+%&3¢]{2}",
@@ -146,15 +171,23 @@ def add_format_parameters(text, format):
         elif re.search(r"(Pred\s+LLN\s+Pre\s+Pre[t%]Pred)", text, re.IGNORECASE):
             parameters.update(OLD_FULL_BASE_REGEX_FIELDS)
             parameters.update(OLD_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
+
+    elif format == FORMATS.THIRD.FULL:
+        parameters.update(BASE_THIRD_REGEX_FEILDS)
+        parameters.update(THIRD_SPECIFIC_REGEX_FIELDS)
+
     return parameters
 
 def get_regex_params(text):
     if re.findall(OLD_FORMAT_IDENTIFIER, text, re.IGNORECASE):
         patterns = BASE_OLD_REGEX_FIELDS.copy()
-        patterns.update(add_format_parameters(text, FORMATS.OLD))
+        patterns.update(add_format_parameters(text, FORMATS.OLD.FULL))
+    elif re.findall(THIRD_FORMAT_IDENTIFIER, text, re.IGNORECASE):
+        patterns = BASE_THIRD_REGEX_FEILDS.copy()
+        patterns.update(add_format_parameters(text, FORMATS.THIRD.FULL))
     else:
         patterns = BASE_NEW_REGEX_FIELDS.copy()
-        patterns.update(add_format_parameters(text, FORMATS.NEW))
+        patterns.update(add_format_parameters(text, FORMATS.NEW.FULL_WITH_POST))
 
     return patterns
 
@@ -169,7 +202,7 @@ def extract_text(text):
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 if field not in TEXT_FIELDS:
-                    data[field] = " ".join(match.groups()).lower().replace("o","0").replace("l","1").replace(",", ".").replace("~", "-").replace('..', '.')
+                    data[field] = " ".join(match.groups()).lower().replace("o","0").replace("l","1").replace(",", ".").replace("~", "-").replace('..', '.').replace('s', '5')
                 else:
                     data[field] = " ".join(match.groups())
             else:
@@ -188,12 +221,16 @@ def delete_images(images_path):
 def get_new_or_old_format_from_text(text):
     new_identifier = re.findall(NEW_FORMAT_IDENTIFIER, text, re.IGNORECASE)
     old_identifier = re.findall(OLD_FORMAT_IDENTIFIER, text, re.IGNORECASE)
+    third_identifier = re.findall(THIRD_FORMAT_IDENTIFIER, text, re.IGNORECASE)
 
-    if old_identifier and not new_identifier:
+    if old_identifier and not new_identifier and not third_identifier:
         print("Old format detected, using tesseract")
         return tesseract_get_recognized_text, 150, 70
-    elif new_identifier and not old_identifier:
+    elif new_identifier and not old_identifier and not third_identifier:
         print("New format identifier detected, using easyocr")
+    elif third_identifier and not old_identifier and not new_identifier:
+        print("Third format identifier detected, using tesseract")
+        return tesseract_get_recognized_text, 150, 70
     else:
         print("Couldn't detect format. Defaulting to easyocr")
 
@@ -214,19 +251,32 @@ def process_file(pdf_path):
                                           num_of_thresholds=num_of_thresh)
     debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
     debugging_data += (text + "\n\n")
-    t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
-    append_data(t)
+    try:
+        t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
+        append_data(t)
+    except Exception as e:
+        t= "Bad!"
+
     delete_images(img_path)
     return t, debugging_data
 
 def get_data_from_folder(folder_path):
     debugging_data = ""
+    already_processed = extract_file_paths_from_excel()
+    bad_files = []
 
-    for file in folder_path:
+    for file in os.listdir(folder_path):
         if file.endswith(".pdf"):
             pdf_path = os.path.join(folder_path, file)
-            _, debug = process_file(pdf_path)
-            debugging_data += debug
+
+            if pdf_path not in already_processed:
+                e, debug = process_file(pdf_path)
+                debugging_data += debug
+                if "Bad!" in e:
+                    bad_files.append(pdf_path)
+
+    with open("bad_files.txt", "w") as g:
+        g.write('\n'.join(bad_files))
 
     with open('debugging_data.txt', 'w') as f:
         f.write(debugging_data)
@@ -239,7 +289,6 @@ def get_data_from_file(pdf_path):
 
     return extracted_data
 
-
-folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\test"
-logging.getLogger("easyocr").setLevel(logging.ERROR)
-get_data_from_folder(folder_path)
+# folder_path = r"C:\Users\danie\Documents\University\Biomediacl_engineering\final_project\data\test"
+# logging.getLogger("easyocr").setLevel(logging.ERROR)
+# get_data_from_folder(folder_path)

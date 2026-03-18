@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: pulmonapp
+    env: python
+    pythonVersion: "3.11"
+    buildCommand: >-
+      sudo apt-get install -y tesseract-ocr poppler-utils &&
+      cd Frontend && npm install && npm run build && cd .. &&
+      pip install -r Backend/Scripts/ExtractorFiles/requirements.txt
+    startCommand: >-
+      gunicorn
+      --chdir Backend/Scripts/ExtractorFiles
+      web_backend:app
+      --bind 0.0.0.0:$PORT
+      --timeout 120
+      --workers 2
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: "0"
+    disk:
+      name: app-data
+      mountPath: /opt/render/project/src/Backend/Scripts/ExtractorFiles
+      sizeGB: 1

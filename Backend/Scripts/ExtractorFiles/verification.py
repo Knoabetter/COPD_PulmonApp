@@ -14,16 +14,26 @@ def validate_pre_pred_percent(pre, pred, percent):
 
 
 def get_full_values(value):
-    if value.count(' ') == 6:
-        pred, _, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
+    parts = value.split()  # split() handles multiple/mixed whitespace
+    n = len(parts)
+    if n == 7:  # pred LLN pre pre%pred post post%pred dchange
+        pred, _, pre, pred_pre_percent, post, pred_post_percent, dchange = parts
+    elif n == 6:  # pred pre pre%pred post post%pred dchange
+        pred, pre, pred_pre_percent, post, pred_post_percent, dchange = parts
     else:
-        pred, pre, pred_pre_percent, post, pred_post_percent, dchange = value.split(' ')
+        # Insufficient tokens from OCR — pad with None so callers don't crash
+        padded = parts + [None] * (6 - n)
+        pred, pre, pred_pre_percent, post, pred_post_percent, dchange = padded[:6]
 
     return pred, pre, pred_pre_percent, post, pred_post_percent, dchange
 
 
 def validate_all(validation_errors, value_name, value):
     pred, pre, pred_pre_percent, post, pred_post_percent, dchange = get_full_values(value)
+
+    if None in (post, pred, pred_post_percent, pre, pred_pre_percent, dchange):
+        validation_errors += "Incomplete OCR data for {}, ".format(value_name)
+        return validation_errors
 
     if not validate_post_pred_percent(float(post), float(pred), float(pred_post_percent)):
         validation_errors += "Failed pred/post percent validation for {}, ".format(value_name)

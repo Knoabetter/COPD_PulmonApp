@@ -1,0 +1,7 @@
+Comparison,Murray FEV1 mean,Murray FEV1 sd,Measured FEV1 mean,Measured FEV1 sd,n,Pearson r,Paired t p,Mean diff (y-x),SD diff,Metric,GLI FEV1 mean,GLI FEV1 sd,Murray FVC mean,Murray FVC sd,Measured FVC mean,Measured FVC sd,GLI FVC mean,GLI FVC sd,Murray Ratio mean,Murray Ratio sd,Measured Ratio mean,Measured Ratio sd,GLI Ratio mean,GLI Ratio sd
+Measured FEV1 vs Murray FEV1,,,,,0,,,,,FEV1,,,,,,,,,,,,,,
+Measured FEV1 vs GLI FEV1,,,,,0,,,,,FEV1,,,,,,,,,,,,,,
+Measured FVC vs Murray FVC,,,,,0,,,,,FVC,,,,,,,,,,,,,,
+Measured FVC vs GLI FVC,,,,,0,,,,,FVC,,,,,,,,,,,,,,
+Measured Ratio vs Murray Ratio,,,,,0,,,,,FEV1/FVC Ratio,,,,,,,,,,,,,,
+Measured Ratio vs GLI Ratio,,,,,0,,,,,FEV1/FVC Ratio,,,,,,,,,,,,,,

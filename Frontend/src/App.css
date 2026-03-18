@@ -1,32 +1,47 @@
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 15px;
-  }
-  
-  .navbar {
-    margin-bottom: 2rem;
-  }
-  
-  .card {
-    margin-bottom: 1.5rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  .form-label {
-    font-weight: 500;
-  }
-  
-  .nav-link {
-    cursor: pointer;
-  }
-  
-  .nav-link.active {
-    font-weight: bold;
-  }
-  
-  .jumbotron {
-    padding: 2rem;
-    border-radius: 0.3rem;
-    background-color: #f8f9fa;
-  }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Root scale — 17px gives comfortable clinical readability ── */
+html { font-size: 17px; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f8fafc; /* slate-50 */
+  color: #0f172a;       /* slate-900 */
+}
+
+.App { min-height: 100vh; }
+
+/* ── Tailwind text overrides — ~15% above defaults ── */
+.text-xs   { font-size: 0.78rem  !important; }   /* ~13 px */
+.text-sm   { font-size: 0.9rem   !important; }   /* ~15 px */
+.text-base { font-size: 1.05rem  !important; }   /* ~18 px */
+.text-lg   { font-size: 1.2rem   !important; }   /* ~20 px */
+.text-xl   { font-size: 1.4rem   !important; }   /* ~24 px */
+.text-2xl  { font-size: 1.7rem   !important; }   /* ~29 px */
+.text-3xl  { font-size: 2.1rem   !important; }   /* ~36 px */
+
+/* ── Tables — consistent density ── */
+th, td { font-size: 0.88rem !important; }
+
+/* ── Nav links ── */
+nav a, nav button { font-size: 0.9rem !important; }
+
+/* ── SVG icons — prevent font-size from distorting them ── */
+svg { flex-shrink: 0; }
+
+/* ── Focus ring — accessible but not garish ── */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar — subtle ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }

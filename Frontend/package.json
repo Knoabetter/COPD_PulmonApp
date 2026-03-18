@@ -13,19 +13,27 @@
     "axios": "^1.9.0",
     "bootstrap": "^5.3.5",
     "file-saver": "^2.0.5",
+    "lucide-react": "^0.518.0",
     "papaparse": "^5.5.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-pdf": "^10.2.0",
     "xlsx": "^0.18.5"
+  },
+  "overrides": {
+    "pdfjs-dist": "5.4.449"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8.53.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.10",
     "typescript": "^5.2.2",
     "vite": "^5.0.0"
   }

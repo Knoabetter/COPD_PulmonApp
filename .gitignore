@@ -2,4 +2,17 @@
 *.xls
 *.pdf
 *.txt
+
+# GLI 2012 reference tables — published data, must be committed for production
+!Backend/Scripts/Data/lookuptables.xlsx
+
+# Python
 __pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+
+# Runtime folders (ephemeral on Render)
+uploads/
+temp/
