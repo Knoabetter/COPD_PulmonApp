@@ -657,6 +657,12 @@ def clinical_analysis():
     """
     Clinical Analysis endpoint with ERS 2022 dual-method and Lung functions interpretation
     """
+    if not PDF_EXTRACTOR_AVAILABLE:
+        return jsonify({
+            'error': 'PDF extractor not available — check server logs for the import error.',
+            'success': False
+        }), 503
+
     try:
         # Handle file upload from FormData
         if 'file' not in request.files:
@@ -832,6 +838,12 @@ def batch_clinical_analysis():
     """
     Batch Clinical Analysis - Analyze multiple PDFs at once
     """
+    if not PDF_EXTRACTOR_AVAILABLE:
+        return jsonify({
+            'error': 'PDF extractor not available — check server logs for the import error.',
+            'success': False
+        }), 503
+
     try:
         # Get files from FormData
         files = []
