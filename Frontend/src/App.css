@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ── Root scale — 17px gives comfortable clinical readability ── */
 html { font-size: 17px; }
