@@ -2,6 +2,7 @@
 *.xls
 *.pdf
 *.txt
+!**/requirements.txt
 
 # GLI 2012 reference tables — published data, must be committed for production
 !Backend/Scripts/Data/lookuptables.xlsx
