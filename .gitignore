@@ -6,6 +6,11 @@
 # GLI 2012 reference tables — published data, must be committed for production
 !Backend/Scripts/Data/lookuptables.xlsx
 
+# Dependencies — never commit these
+node_modules/
+venv/
+poppler/
+
 # Python
 __pycache__/
 *.pyc
@@ -14,5 +19,11 @@ __pycache__/
 .env.local
 
 # Runtime folders (ephemeral on Render)
-uploads/
-temp/
+**/uploads/
+**/temp/
+
+# Office temp/lock files
+~$*
+
+# Build output — NOT ignored (Render needs dist/ committed or built at deploy time)
+# dist/
