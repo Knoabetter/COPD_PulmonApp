@@ -1,5 +1,11 @@
-import tempfile
+import sys
 import os
+# Ensure this file's directory is on sys.path so local modules
+# (pdf_extractor, working_calculator, consts, etc.) are importable
+# when gunicorn runs with --chdir (which doesn't add cwd to sys.path)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import tempfile
 import pandas as pd  
 import numpy as np
 from flask import Flask, request, jsonify, send_file, send_from_directory
