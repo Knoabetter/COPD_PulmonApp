@@ -1,20 +1,13 @@
 import os
 import re
+import cv2
+import easyocr
 import logging
 import pandas as pd
-import numpy as np
-from PIL import Image
 from typing import List
 from pdf2image import convert_from_path
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = os.environ.get('TESSERACT_PATH', 'tesseract')
-
-try:
-    import easyocr
-    EASYOCR_AVAILABLE = True
-except Exception:
-    EASYOCR_AVAILABLE = False
-    print("⚠️ EasyOCR not available — all formats will use Tesseract")
 from consts import *
 from save_data import append_data
 from verification import verify_data_results
@@ -107,27 +100,31 @@ def group_easyocr_results_by_row(ocr_results, y_threshold=15):
     organized_rows = '\n'.join([' '.join([text for _, text, _, _ in row]) for row in rows])
     return organized_rows
 
-def _preprocess_image(image_path: str, threshold: int) -> Image.Image:
-    """Grayscale + binary threshold using Pillow (no cv2 dependency)."""
-    img = Image.open(image_path).convert('L')
-    arr = np.array(img)
-    binary = np.where(arr > threshold, 255, 0).astype(np.uint8)
-    return Image.fromarray(binary)
-
 def easyocr_get_recognized_text(image_path, threshold=170):
     text = ""
-    binary_img = _preprocess_image(image_path, threshold)
+
+    gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+
     reader = easyocr.Reader(['en'])
-    results = reader.readtext(np.array(binary_img))
+    results = reader.readtext(binary)
+
     text += group_easyocr_results_by_row(results)
     text += "\n"
+
     return text
 
 def tesseract_get_recognized_text(image_path, threshold=170):
     text = ""
-    binary_img = _preprocess_image(image_path, threshold)
-    text += pytesseract.image_to_string(binary_img)
+
+    gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+
+    text += pytesseract.image_to_string(binary)
     text += "\n"
+
     return text
 
 def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_thresholds=40):
@@ -230,17 +227,11 @@ def get_new_or_old_format_from_text(text):
         print("Old format detected, using tesseract")
         return tesseract_get_recognized_text, 150, 70
     elif new_identifier and not old_identifier and not third_identifier:
-        if not EASYOCR_AVAILABLE:
-            print("New format detected but EasyOCR unavailable — falling back to tesseract")
-            return tesseract_get_recognized_text, 150, 70
         print("New format identifier detected, using easyocr")
     elif third_identifier and not old_identifier and not new_identifier:
         print("Third format identifier detected, using tesseract")
         return tesseract_get_recognized_text, 150, 70
     else:
-        if not EASYOCR_AVAILABLE:
-            print("Couldn't detect format. EasyOCR unavailable — using tesseract")
-            return tesseract_get_recognized_text, 150, 70
         print("Couldn't detect format. Defaulting to easyocr")
 
     return easyocr_get_recognized_text, 180, 35
