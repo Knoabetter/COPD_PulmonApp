@@ -17,6 +17,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 COPY . .
 
@@ -34,4 +36,4 @@ CMD gunicorn \
     web_backend:app \
     --bind 0.0.0.0:${PORT:-10000} \
     --timeout 120 \
-    --workers 2
+    --workers 1
