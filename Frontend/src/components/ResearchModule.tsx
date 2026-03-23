@@ -3,6 +3,7 @@ import {
   Upload, BarChart3, Database, Download, FileText, Users, TrendingUp,
   AlertCircle, CheckCircle, Settings, Loader2, Eye, Filter, Calendar, Clock,
 } from 'lucide-react';
+import { authFetch } from '../utils/authFetch';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -87,7 +88,7 @@ const ResearchModule = () => {
   useEffect(() => {
     if (activeTab !== 'database' || dbStatus !== null) return;
     setDbLoading(true);
-    fetch(`${API_BASE}/research/database/status`)
+    authFetch(`${API_BASE}/research/database/status`)
       .then(r => r.json())
       .then(data => { if (data.success) setDbStatus(data); })
       .catch(() => {})
@@ -128,7 +129,7 @@ const ResearchModule = () => {
         formData.append('end_date',   extractionPeriod.endDate);
       }
 
-      const response = await fetch(`${API_BASE}/research/batch-xlsx`, {
+      const response = await authFetch(`${API_BASE}/research/batch-xlsx`, {
         method: 'POST',
         body: formData,
       });
@@ -248,7 +249,7 @@ const ResearchModule = () => {
       )}
 
       {activeTab === 'population' && <PopulationStudiesView />}
-      {activeTab === 'database'   && <DatabaseView dbStatus={dbStatus} dbLoading={dbLoading} />}
+      {activeTab === 'database'   && <DatabaseView dbStatus={dbStatus} dbLoading={dbLoading} onImportSuccess={() => { setDbStatus(null); setDbLoading(true); authFetch(`${API_BASE}/research/database/status`).then(r => r.json()).then(d => { if (d.success) setDbStatus(d); }).catch(() => {}).finally(() => setDbLoading(false)); }} />}
     </div>
   );
 };
@@ -454,9 +455,37 @@ const PopulationStudiesView = () => {
 };
 
 // ── Database Management ───────────────────────────────────────────
-const DatabaseView = ({ dbStatus, dbLoading }: { dbStatus: DbStatus | null; dbLoading: boolean }) => {
+const DatabaseView = ({ dbStatus, dbLoading, onImportSuccess }: { dbStatus: DbStatus | null; dbLoading: boolean; onImportSuccess: () => void }) => {
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = React.useRef<HTMLInputElement>(null);
+
   const handleExport = (format: 'excel' | 'csv' | 'json') => {
     window.open(`${API_BASE}/research/database/export?format=${format}`, '_blank');
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportStatus(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await authFetch(`${API_BASE}/research/database/import`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        setImportStatus({ type: 'success', message: data.message });
+        onImportSuccess();
+      } else {
+        setImportStatus({ type: 'error', message: data.error });
+      }
+    } catch {
+      setImportStatus({ type: 'error', message: 'Import request failed' });
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
   };
 
   const skelly = <div className="animate-pulse bg-slate-100 rounded h-4 w-20 inline-block" />;
@@ -506,7 +535,16 @@ const DatabaseView = ({ dbStatus, dbLoading }: { dbStatus: DbStatus | null; dbLo
         </div>
       </SectionCard>
 
+      {/* Import feedback */}
+      {importStatus && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border ${importStatus.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          {importStatus.type === 'success' ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+          {importStatus.message}
+        </div>
+      )}
+
       {/* Actions */}
+      <input ref={importInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleImport} />
       <div className="grid sm:grid-cols-2 gap-3">
         <button
           onClick={() => handleExport('excel')}
@@ -521,6 +559,14 @@ const DatabaseView = ({ dbStatus, dbLoading }: { dbStatus: DbStatus | null; dbLo
         >
           <span className="text-slate-400"><Download className="w-4 h-4" /></span>
           Export to CSV
+        </button>
+        <button
+          onClick={() => importInputRef.current?.click()}
+          disabled={importing}
+          className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+        >
+          <span className="text-slate-400">{importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}</span>
+          {importing ? 'Importing…' : 'Import Database'}
         </button>
         <button
           className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"

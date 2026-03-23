@@ -4,6 +4,7 @@ import ViewPDF from '../ViewPDF';
 import EnhancedAnalysisResults from './EnhancedAnalysisResults';
 import DiagnosisModal from './DiagnosisModal';
 import BatchUploadSection from '../shared/BatchUploadSection';
+import { authFetch } from '../../utils/authFetch';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -94,7 +95,7 @@ const ClinicalAnalysisModule = () => {
       const measuredRatio = analysisData.measured?.ratio;
       const fev1Percent = analysisData.murray?.FEV1?.percent;
       if (!measuredRatio || measuredRatio >= 0.70) return;
-      const response = await fetch(`${API_BASE}/diagnosis/suggest`, {
+      const response = await authFetch(`${API_BASE}/diagnosis/suggest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +117,7 @@ const ClinicalAnalysisModule = () => {
   };
 
   const saveDiagnosis = async (diagnosis: string, severity: string) => {
-    const response = await fetch(`${API_BASE}/diagnosis/save`, {
+    const response = await authFetch(`${API_BASE}/diagnosis/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -212,7 +213,7 @@ const ClinicalAnalysisModule = () => {
       formData.append('criteria', diagnosticCriteria);
       setUploadStatus(`Processing ${files.length} file${files.length > 1 ? 's' : ''}…`);
 
-      const response = await fetch(`${API_BASE}/analyze/batch`, { method: 'POST', body: formData });
+      const response = await authFetch(`${API_BASE}/analyze/batch`, { method: 'POST', body: formData });
       if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -261,7 +262,7 @@ const ClinicalAnalysisModule = () => {
         setUploadProgress(Math.floor(simProgress));
       }, 250);
 
-      const response = await fetch(`${API_BASE}/analyze`, { method: 'POST', body: formData });
+      const response = await authFetch(`${API_BASE}/analyze`, { method: 'POST', body: formData });
       const results = await response.json();
       clearInterval(progressInterval);
       progressInterval = null;
@@ -419,22 +420,18 @@ const ClinicalAnalysisModule = () => {
         </p>
       )}
 
-      {/* Progress bar */}
+      {/* Processing — centered gif */}
       {isProcessing && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-700">Analyzing…</span>
-            <div className="flex items-center gap-3 text-sm text-slate-500">
-              <span className="font-bold text-blue-600">{uploadProgress}%</span>
-              <span>•</span>
-              <span className="font-mono">{`${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`} elapsed</span>
-            </div>
-          </div>
-          <div className="w-full bg-slate-200 rounded-full h-2.5">
-            <div
-              className="h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300"
-              style={{ width: `${uploadProgress}%` }}
-            />
+        <div className="flex flex-col items-center justify-center py-10">
+          <img
+            src="/images/analyzing.gif"
+            alt="Analyzing..."
+            className="w-[36rem] h-[36rem] object-contain"
+          />
+          <div className="flex items-center gap-3 text-sm text-slate-500 mt-2">
+            <span className="font-bold text-blue-600">{uploadProgress}%</span>
+            <span>•</span>
+            <span className="font-mono">{`${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`} elapsed</span>
           </div>
         </div>
       )}
@@ -501,7 +498,7 @@ const ClinicalAnalysisModule = () => {
       )}
 
       {/* ── Single mode — split view ────────────────────────────────────── */}
-      {currentView === 'single' && (analysisResults || selectedFile) && (
+      {currentView === 'single' && !isProcessing && (analysisResults || selectedFile) && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[800px]">
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="bg-slate-900 px-5 py-4 border-b border-slate-700">
@@ -511,7 +508,7 @@ const ClinicalAnalysisModule = () => {
               </h3>
             </div>
             <div className="h-full p-4">
-              <ViewPDF pdfUrl={pdfUrl ?? undefined} filename={pdfFilename ?? undefined} isLoading={isProcessing || pdfLoading} />
+              <ViewPDF pdfUrl={pdfUrl ?? undefined} filename={pdfFilename ?? undefined} isLoading={pdfLoading} />
             </div>
           </div>
           <div className="overflow-y-auto">

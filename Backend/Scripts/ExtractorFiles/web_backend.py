@@ -6,13 +6,16 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import tempfile
-import pandas as pd  
+import pandas as pd
 import numpy as np
+import jwt
+import bcrypt
+from functools import wraps
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 from enum import Enum
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 try:
     from working_calculator import (
         WorkingGLI2012Calculator, 
@@ -120,6 +123,24 @@ class _NumpyJSONProvider(DefaultJSONProvider):
 
 app.json_provider_class = _NumpyJSONProvider
 app.json = _NumpyJSONProvider(app)
+
+# ==================== AUTH CONFIG ====================
+JWT_SECRET      = os.environ.get('JWT_SECRET', 'dev-secret-change-in-production')
+AUTH_USERNAME   = os.environ.get('AUTH_USERNAME', 'admin')
+AUTH_PASSWORD_HASH = os.environ.get('AUTH_PASSWORD_HASH', '')
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token:
+            return jsonify({'error': 'Unauthorized'}), 401
+        try:
+            jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 # Configuration
 # React frontend build directory (relative to this file → project_root/Frontend/dist)
@@ -339,7 +360,32 @@ def health_check():
         'upload_folder': app.config['UPLOAD_FOLDER']
     })
 
+@app.route('/auth/login', methods=['POST'])
+def auth_login():
+    data = request.get_json() or {}
+    username = data.get('username', '')
+    password = data.get('password', '')
+    if not AUTH_PASSWORD_HASH:
+        return jsonify({'error': 'Server auth not configured — set AUTH_PASSWORD_HASH env var'}), 503
+    username_ok = username == AUTH_USERNAME
+    try:
+        password_ok = bcrypt.checkpw(password.encode(), AUTH_PASSWORD_HASH.encode())
+    except Exception:
+        password_ok = False
+    if not username_ok or not password_ok:
+        return jsonify({'error': 'Invalid credentials'}), 401
+    token = jwt.encode(
+        {'sub': username, 'exp': datetime.now(timezone.utc) + timedelta(hours=24)},
+        JWT_SECRET, algorithm='HS256'
+    )
+    return jsonify({'success': True, 'token': token})
+
+@app.route('/auth/logout', methods=['POST'])
+def auth_logout():
+    return jsonify({'success': True})
+
 @app.route('/api/pdf/<filename>')
+@require_auth
 def serve_pdf(filename):
     """Serve uploaded PDF files"""
     try:
@@ -354,6 +400,7 @@ def serve_pdf(filename):
 # ==================== Upload ENDPOINT ==================== 
 
 @app.route('/upload', methods=['POST'])
+@require_auth
 def upload_file():
     """
     Enhanced PDF upload endpoint with ERS 2022 dual-method clinical interpretation
@@ -630,6 +677,7 @@ def upload_file():
     # ==================== TEST ENDPOINT ====================
 
 @app.route('/test', methods=['GET'])
+@require_auth
 def test_extraction():
     """Test endpoint to verify PDF extraction without file upload"""
     if not PDF_EXTRACTOR_AVAILABLE:
@@ -659,6 +707,7 @@ def test_extraction():
 # ==================== Analyze ENDPOINT ====================
 
 @app.route('/analyze', methods=['POST'])
+@require_auth
 def clinical_analysis():
     """
     Clinical Analysis endpoint with ERS 2022 dual-method and Lung functions interpretation
@@ -840,6 +889,7 @@ def clinical_analysis():
 # ==================== BATCH ANALYSIS ENDPOINT ====================
 
 @app.route('/analyze/batch', methods=['POST'])
+@require_auth
 def batch_clinical_analysis():
     """
     Batch Clinical Analysis - Analyze multiple PDFs at once
@@ -1043,6 +1093,7 @@ def batch_clinical_analysis():
 # ==================== CLEANUP ENDPOINT ====================
 
 @app.route('/cleanup/old-pdfs', methods=['POST'])
+@require_auth
 def cleanup_old_pdfs():
     """Clean up PDFs older than 24 hours"""
     try:
@@ -1073,6 +1124,7 @@ def cleanup_old_pdfs():
 # ==================== SEARCH & DIAGNOSIS ENDPOINTS ====================
 
 @app.route('/search/patient/<patient_id>', methods=['GET'])
+@require_auth
 def search_patient_tests(patient_id):
     """Get all tests for a specific patient ID"""
     try:
@@ -1145,6 +1197,7 @@ def search_patient_tests(patient_id):
         }), 500
 
 @app.route('/search/date-range', methods=['POST'])
+@require_auth
 def search_tests_by_date():
     """Get tests within a date range"""
     try:
@@ -1212,6 +1265,7 @@ def search_tests_by_date():
         }), 500
 
 @app.route('/diagnosis/save', methods=['POST'])
+@require_auth
 def save_diagnosis():
     """Save physician's confirmed diagnosis"""
     try:
@@ -1275,6 +1329,7 @@ def save_diagnosis():
         }), 500
 
 @app.route('/diagnosis/suggest', methods=['POST'])
+@require_auth
 def suggest_diagnosis():
     """Analyze test results and suggest obstructive pattern diagnosis"""
     try:
@@ -1339,6 +1394,7 @@ def suggest_diagnosis():
         }), 500
 
 @app.route('/database/patients', methods=['GET'])
+@require_auth
 def get_all_patients():
     """Get all unique patient IDs for search autocomplete"""
     try:
@@ -1386,6 +1442,7 @@ def get_all_patients():
 # ==================== RESEARCH MODULE ENDPOINTS ====================
 
 @app.route('/research/batch-xlsx', methods=['POST'])
+@require_auth
 def batch_xlsx_upload():
     """Handle XLSX file upload with hospital server links"""
     try:
@@ -1450,6 +1507,7 @@ def batch_xlsx_upload():
         }), 500
 
 @app.route('/research/database/status', methods=['GET'])
+@require_auth
 def database_status():
     """Get current database status and statistics"""
     try:
@@ -1508,6 +1566,7 @@ def database_status():
         }), 500
 
 @app.route('/research/database/export', methods=['GET'])
+@require_auth
 def export_database():
     """Export database in various formats"""
     try:
@@ -1556,7 +1615,28 @@ def export_database():
             'success': False
         }), 500
 
+@app.route('/research/database/import', methods=['POST'])
+@require_auth
+def import_database():
+    """Replace the database with an uploaded xlsx file"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided', 'success': False}), 400
+        file = request.files['file']
+        if not file.filename.endswith('.xlsx'):
+            return jsonify({'error': 'File must be an .xlsx file', 'success': False}), 400
+        df = pd.read_excel(file, engine='openpyxl')
+        df.to_excel(DATABASE_FILE_NAME, index=False, engine='openpyxl')
+        return jsonify({
+            'success': True,
+            'message': f'Database imported successfully: {len(df)} records loaded',
+            'records': len(df)
+        })
+    except Exception as e:
+        return jsonify({'error': f'Import failed: {str(e)}', 'success': False}), 500
+
 @app.route('/research/database/query', methods=['POST'])
+@require_auth
 def query_database():
     """Query database with filters"""
     try:

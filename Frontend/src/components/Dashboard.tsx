@@ -57,13 +57,6 @@ function Dashboard({ username }: DashboardProps) {
                   ← Home
                 </button>
               )}
-              <div className="h-4 w-px bg-slate-200" />
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                  {username.slice(0, 2).toUpperCase()}
-                </span>
-                <span className="text-sm font-medium text-slate-700">{username}</span>
-              </div>
             </div>
           </div>
         </div>

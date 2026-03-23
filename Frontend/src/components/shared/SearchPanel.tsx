@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Calendar, User, Loader2 } from 'lucide-react';
+import { authFetch } from '../../utils/authFetch';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -16,7 +17,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
     setIsSearching(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/search/patient/${patientId}`);
+      const response = await authFetch(`${API_BASE}/search/patient/${patientId}`);
       const data = await response.json();
       if (data.success) onSearchResults(data.tests, 'patient');
       else setError(data.error || 'No records found for this patient ID.');
@@ -32,7 +33,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
     setIsSearching(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/search/date-range`, {
+      const response = await authFetch(`${API_BASE}/search/date-range`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ start_date: startDate, end_date: endDate }),

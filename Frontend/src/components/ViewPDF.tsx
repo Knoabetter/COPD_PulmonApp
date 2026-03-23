@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { authFetch } from '../utils/authFetch';
 import { ZoomIn, ZoomOut, RotateCw, Download, Maximize2, Minimize2, RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
@@ -147,7 +148,7 @@ const ViewPDF: React.FC<ViewPDFProps> = ({
     
     try {
       // Check if URL is accessible
-      const response = await fetch(pdfUrl, { method: 'HEAD' });
+      const response = await authFetch(pdfUrl, { method: 'HEAD' });
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
