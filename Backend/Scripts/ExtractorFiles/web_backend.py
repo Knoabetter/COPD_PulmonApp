@@ -740,7 +740,9 @@ def clinical_analysis():
 
         try:
             extracted_data = get_data_from_file(pdf_path) # Extract data from PDF
-                        # Auto-fill Age if missing using Date of Birth
+            if not isinstance(extracted_data, dict):
+                raise ValueError('PDF format not recognised. Please ensure this is a valid spirometry report.')
+            # Auto-fill Age if missing using Date of Birth
             if not extracted_data.get("Age") or extracted_data.get("Age") is None:
                 dob = extracted_data.get("Date of Birth")
                 ref_date = extracted_data.get("Date_PRE") or extracted_data.get("Date")
@@ -945,7 +947,12 @@ def batch_clinical_analysis():
                 
                 # Extract data using PDF extractor
                 extracted_data = get_data_from_file(pdf_path)
-                
+                if not isinstance(extracted_data, dict):
+                    os.remove(pdf_path)
+                    results.append({'filename': uploaded_file.filename, 'success': False,
+                                    'error': 'PDF format not recognised', 'index': i})
+                    continue
+
                 # Validate and process (similar to single analysis)
                 required_fields = ['Age', 'Sex', 'Height']
                 missing_fields = [field for field in required_fields 
