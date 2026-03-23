@@ -3,6 +3,14 @@ import re
 import cv2
 import easyocr
 import logging
+
+_easyocr_reader = None
+
+def _get_easyocr_reader():
+    global _easyocr_reader
+    if _easyocr_reader is None:
+        _easyocr_reader = easyocr.Reader(['en'])
+    return _easyocr_reader
 import pandas as pd
 from typing import List
 from pdf2image import convert_from_path
@@ -107,7 +115,7 @@ def easyocr_get_recognized_text(image_path, threshold=170):
 
     _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
 
-    reader = easyocr.Reader(['en'])
+    reader = _get_easyocr_reader()
     results = reader.readtext(binary)
 
     text += group_easyocr_results_by_row(results)
