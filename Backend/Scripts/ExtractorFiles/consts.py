@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class FORMATS(Enum):
+class FORMATS:
     class OLD(Enum):
         FULL = "OLD_FULL"
         ONLY_SPIROMETRY_WITH_POST = "OLD_ONLY_SPIROMETRY_WITH_POST"
