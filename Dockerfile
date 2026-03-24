@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r Backend/Scripts/ExtractorFiles/requirements.txt
 
 # Pre-download EasyOCR models so they are baked into the image (no runtime downloads)
-RUN python -c "import easyocr; easyocr.Reader(['en'])"
+RUN python -c "import easyocr, numpy as np; r = easyocr.Reader(['en']); r.readtext(np.zeros((10,10,3), dtype=np.uint8))"
 
 EXPOSE 10000
 
