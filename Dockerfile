@@ -25,8 +25,9 @@ COPY . .
 # Build React frontend
 RUN cd Frontend && npm install && npm run build
 
-# Install Python dependencies
+# Install Python dependencies (CPU-only torch to avoid CUDA bloat on free tier)
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r Backend/Scripts/ExtractorFiles/requirements.txt
 
 # Pre-download EasyOCR models so they are baked into the image (no runtime downloads)
