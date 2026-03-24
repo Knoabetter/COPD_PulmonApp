@@ -4,12 +4,9 @@ import cv2
 import easyocr
 import logging
 
-_easyocr_reader = None
+_easyocr_reader = easyocr.Reader(['en'])
 
 def _get_easyocr_reader():
-    global _easyocr_reader
-    if _easyocr_reader is None:
-        _easyocr_reader = easyocr.Reader(['en'])
     return _easyocr_reader
 import pandas as pd
 from typing import List
