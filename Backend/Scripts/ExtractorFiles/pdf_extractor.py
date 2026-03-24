@@ -4,14 +4,12 @@ import cv2
 import easyocr
 import logging
 
-import numpy as _np
-_easyocr_reader = easyocr.Reader(['en'])
-# Force recognition model to load now (it loads lazily on first readtext call).
-# Without this, the first request triggers model load and causes OOM on free tier.
-_easyocr_reader.readtext(_np.zeros((10, 10, 3), dtype=_np.uint8))
-del _np
+_easyocr_reader = None
 
 def _get_easyocr_reader():
+    global _easyocr_reader
+    if _easyocr_reader is None:
+        _easyocr_reader = easyocr.Reader(['en'])
     return _easyocr_reader
 import pandas as pd
 from typing import List
