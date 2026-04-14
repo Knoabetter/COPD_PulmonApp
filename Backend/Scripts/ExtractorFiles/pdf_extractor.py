@@ -1,16 +1,7 @@
 import os
 import re
 import cv2
-import easyocr
 import logging
-
-_easyocr_reader = None
-
-def _get_easyocr_reader():
-    global _easyocr_reader
-    if _easyocr_reader is None:
-        _easyocr_reader = easyocr.Reader(['en'])
-    return _easyocr_reader
 import pandas as pd
 from typing import List
 from pdf2image import convert_from_path
@@ -55,73 +46,6 @@ def convert_pdf_to_jpegs(file_path: str) -> [str]:
         images_path.append(img_path)
 
     return images_path
-
-def group_easyocr_results_by_row(ocr_results, y_threshold=15):
-    """
-    Groups EasyOCR results into rows, sorting each row's items from left to right.
-
-    Parameters:
-        ocr_results (list): List of OCR results from EasyOCR, where each result is
-            [bbox, text, confidence]. 'bbox' is a list of four points [[x1, y1], [x2, y2], [x3, y3], [x4, y4]].
-        y_threshold (int): Maximum vertical distance (in pixels) between detections to consider them in the same row.
-
-    Returns:
-        List of rows, where each row is a list of tuples (bbox, text, confidence) sorted by the left x coordinate.
-    """
-    # First, compute the average y coordinate for each detection
-    detections = []
-    for detection in ocr_results:
-        bbox, text, conf = detection
-        avg_y = sum(point[1] for point in bbox) / len(bbox)
-        detections.append((bbox, text, conf, avg_y))
-
-    # Sort detections by the average y coordinate (top-to-bottom)
-    detections.sort(key=lambda item: item[3])
-
-    # Group detections that are on the same row (i.e. close in the y axis)
-    rows = []
-    current_row = []
-    current_row_y = None
-
-    for detection in detections:
-        bbox, text, conf, avg_y = detection
-        if current_row_y is None:
-            # start first row
-            current_row_y = avg_y
-            current_row.append(detection)
-        elif abs(avg_y - current_row_y) <= y_threshold:
-            # Same row: add the detection
-            current_row.append(detection)
-        else:
-            # New row: sort the previous row by left-most x coordinate and start a new row group
-            current_row.sort(key=lambda item: min(pt[0] for pt in item[0]))
-            rows.append(current_row)
-            current_row = [detection]
-            current_row_y = avg_y
-
-    # Append the last row (if not empty) after sorting
-    if current_row:
-        current_row.sort(key=lambda item: min(pt[0] for pt in item[0]))
-        rows.append(current_row)
-
-    # Remove the average y from the result for clarity
-    organized_rows = '\n'.join([' '.join([text for _, text, _, _ in row]) for row in rows])
-    return organized_rows
-
-def easyocr_get_recognized_text(image_path, threshold=170):
-    text = ""
-
-    gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
-    _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
-
-    reader = _get_easyocr_reader()
-    results = reader.readtext(binary)
-
-    text += group_easyocr_results_by_row(results)
-    text += "\n"
-
-    return text
 
 def tesseract_get_recognized_text(image_path, threshold=170):
     text = ""
@@ -235,19 +159,19 @@ def get_new_or_old_format_from_text(text):
         print("Old format detected, using tesseract")
         return tesseract_get_recognized_text, 150, 70
     elif new_identifier and not old_identifier and not third_identifier:
-        print("New format identifier detected, using easyocr")
+        print("New format identifier detected, using tesseract")
     elif third_identifier and not old_identifier and not new_identifier:
         print("Third format identifier detected, using tesseract")
         return tesseract_get_recognized_text, 150, 70
     else:
-        print("Couldn't detect format. Defaulting to easyocr")
+        print("Couldn't detect format. Defaulting to tesseract")
 
-    return easyocr_get_recognized_text, 180, 35
+    return tesseract_get_recognized_text, 150, 70
 
 def separate_new_from_old_format(images_path):
     text = ""
     for image_path in images_path:
-        text += easyocr_get_recognized_text(image_path, 180)
+        text += tesseract_get_recognized_text(image_path, 150)
 
     return get_new_or_old_format_from_text(text)
 
