@@ -54,7 +54,7 @@ def tesseract_get_recognized_text(image_path, threshold=170):
 
     _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
 
-    text += pytesseract.image_to_string(binary)
+    text += pytesseract.image_to_string(binary, config='--oem 1')
     text += "\n"
 
     return text
@@ -62,6 +62,7 @@ def tesseract_get_recognized_text(image_path, threshold=170):
 def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_thresholds=40):
 
     best_threshold = ({}, 0, "", -1)
+    no_improve_streak = 0
 
     for i in range(base_threshold_level + 1, base_threshold_level + num_of_thresholds + 1, 3):
         text = ""
@@ -73,7 +74,13 @@ def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_
         if value > best_threshold[1]:
             best_threshold = (data, value, text, num)
             print(i, value, num)
+            no_improve_streak = 0
             if value == num:
+                break
+        else:
+            no_improve_streak += 1
+            if no_improve_streak >= 8:
+                print(f"Early stop: no improvement for 8 iterations at threshold {i}")
                 break
 
     return best_threshold

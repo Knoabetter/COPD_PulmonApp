@@ -35,5 +35,5 @@ CMD gunicorn \
     --chdir Backend/Scripts/ExtractorFiles \
     web_backend:app \
     --bind 0.0.0.0:${PORT:-10000} \
-    --timeout 300 \
+    --timeout 900 \
     --workers 1
