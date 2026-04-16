@@ -50,16 +50,15 @@ def convert_pdf_to_jpegs(file_path: str) -> [str]:
     return images_path
 
 def tesseract_get_recognized_text(image_path, threshold=170):
-    text = ""
-
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
     _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+    return pytesseract.image_to_string(binary, config='--oem 1') + "\n"
 
-    text += pytesseract.image_to_string(binary, config='--oem 1')
-    text += "\n"
-
-    return text
+def tesseract_get_recognized_text_otsu(image_path, _threshold=None):
+    """Single-call OCR using Otsu's optimal binary threshold — no iteration needed."""
+    gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return pytesseract.image_to_string(binary, config='--oem 1') + "\n"
 
 def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_thresholds=40):
 
@@ -191,16 +190,22 @@ def separate_new_from_old_format(images_path):
 def process_file(pdf_path):
     debugging_data = ""
     img_path = convert_pdf_to_jpegs(pdf_path)
-    get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
-    data, value, text, _ = analyze_images(img_path, get_text_func, base_threshold_level=base_thresh,
-                                          num_of_thresholds=num_of_thresh)
-    debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
-    debugging_data += (text + "\n\n")
+
+    # Single Otsu pass — mathematically optimal threshold, replaces 26-iteration loop
+    text = ""
+    for image_path in img_path:
+        text += tesseract_get_recognized_text_otsu(image_path)
+
+    data, value, num = extract_text(text)
+    print(f"Otsu extraction: {value}/{num} fields matched")
+
+    debugging_data += "Current pdf path: " + pdf_path + "\n\n"
+    debugging_data += text + "\n\n"
     try:
         t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
         append_data(t)
     except Exception as e:
-        t= "Bad!"
+        t = "Bad!"
 
     delete_images(img_path)
     return t, debugging_data
