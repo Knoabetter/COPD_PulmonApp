@@ -331,7 +331,12 @@ const ViewPDF: React.FC<ViewPDFProps> = ({
           <div className="flex justify-center p-4">
             <Document
               ref={documentRef}
-              file={pdfUrl}
+              file={(() => {
+                const token = localStorage.getItem('auth_token');
+                return token
+                  ? { url: pdfUrl, httpHeaders: { Authorization: `Bearer ${token}` } }
+                  : pdfUrl;
+              })()}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading={

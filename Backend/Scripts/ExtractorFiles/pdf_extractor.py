@@ -32,6 +32,8 @@ def convert_pdf_to_jpegs(file_path: str) -> [str]:
         pages = convert_from_path(file_path, poppler_path=os.environ.get('POPPLER_PATH', None))
     except Exception as e:
         msg = str(e)
+        print(f"[pdf2image ERROR] {type(e).__name__}: {msg}")
+        print(f"[pdf2image] poppler_path={os.environ.get('POPPLER_PATH', 'NOT SET')}")
         if 'page count' in msg.lower() or 'pdfinfo' in msg.lower():
             raise ValueError(
                 "Cannot read this PDF — it may be encrypted, password-protected, or use an unsupported format. "
@@ -148,6 +150,10 @@ def extract_text(text):
                 data[field] = None  # Default to None if not found
         else:
             data["Format"] = patterns["Format"]
+
+    if data.get("Height") is None:
+        lines = [l for l in text.splitlines() if any(k in l.lower() for k in ['height', 'ht', ' cm', 'weight', 'wt'])]
+        print(f"[HEIGHT DEBUG] Height not matched. Relevant lines:\n" + "\n".join(lines[:10]))
 
     data["Validator"] = ""
     data["Missing"] = ""

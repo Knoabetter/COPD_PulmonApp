@@ -19,6 +19,7 @@ export default defineConfig({
       '/api':       'http://localhost:5000',
       '/cleanup':   'http://localhost:5000',
       '/database':  'http://localhost:5000',
+      '/auth':      'http://localhost:5000',
     },
   },
 })

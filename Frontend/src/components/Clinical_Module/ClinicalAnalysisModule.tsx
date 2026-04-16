@@ -33,7 +33,7 @@ const ClinicalAnalysisModule = () => {
       setPdfLoading(true);
       setPdfError(null);
       const url = `${API_BASE}/api/pdf/${filename}`;
-      fetch(url, { method: 'HEAD' })
+      authFetch(url, { method: 'HEAD' })
         .then(response => {
           if (response.ok) setPdfUrl(url);
           else throw new Error(`PDF not accessible: ${response.status}`);
