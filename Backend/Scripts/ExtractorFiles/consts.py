@@ -131,7 +131,7 @@ BASE_NEW_REGEX_FIELDS = {
     "ID": r"(?:(?:\n)|[IDfV)l>:]{2,6})\s*([\d]{6,8})\s+[vw]",
     "Date of Birth": r"[Date of birth;:]{9,13} ([\d]{2}[/1][\d]{2}[/1][\d]{4})\s+",
     "Sex": r"[Gender':]{5,8} (F|M)",
-    "Height": r"[Heairght:]{4,9}\s+([\dOlti~-]{2,4})\s+[coe]m",
+    "Height": r"([1lIi]\d{2}|2[0-2]\d)\s+[coe]m",
     "Weight": r"[Weairght: ]{5,8} ([\d.,Olst~-]{2,3}) [kg]",
     "Age": r"[Age:;. ]{3,6} ([\d]+) Y",
     "BMI": r"[BMIl:; ]{3,6} ([\d.,Olst~-]+) k",

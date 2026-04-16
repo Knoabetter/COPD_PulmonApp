@@ -263,11 +263,15 @@ const ClinicalAnalysisModule = () => {
       }, 250);
 
       const response = await authFetch(`${API_BASE}/analyze`, { method: 'POST', body: formData });
-      const results = await response.json();
       clearInterval(progressInterval);
       progressInterval = null;
 
-      if (!response.ok) throw new Error(results?.error || `Server error ${response.status}`);
+      if (!response.ok) {
+        let errorMsg = `Server error ${response.status}`;
+        try { const e = await response.json(); errorMsg = e.error || errorMsg; } catch {}
+        throw new Error(errorMsg);
+      }
+      const results = await response.json();
       setUploadProgress(100);
 
       if (results.success) {
