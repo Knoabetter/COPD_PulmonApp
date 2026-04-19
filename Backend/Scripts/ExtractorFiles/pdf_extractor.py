@@ -191,16 +191,20 @@ def process_file(pdf_path):
     debugging_data = ""
     img_path = convert_pdf_to_jpegs(pdf_path)
 
-    # Single Otsu pass — mathematically optimal threshold, replaces 26-iteration loop
-    text = ""
-    for image_path in img_path:
-        text += tesseract_get_recognized_text_otsu(image_path)
+    # Try Otsu and a fixed threshold; pick whichever extracts more fields
+    best = ({}, 0, "", -1)
+    for label, get_fn, thresh in [
+        ("Otsu", tesseract_get_recognized_text_otsu, None),
+        ("t=172", tesseract_get_recognized_text, 172),
+    ]:
+        text = "".join(get_fn(p, thresh) for p in img_path)
+        data, value, num = extract_text(text)
+        print(f"{label}: {value}/{num} fields matched")
+        if value > best[1]:
+            best = (data, value, text, num)
 
-    data, value, num = extract_text(text)
-    print(f"Otsu extraction: {value}/{num} fields matched")
-
-    debugging_data += "Current pdf path: " + pdf_path + "\n\n"
-    debugging_data += text + "\n\n"
+    data, value, text, num = best
+    debugging_data += "Current pdf path: " + pdf_path + "\n\n" + text + "\n\n"
     try:
         t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
         append_data(t)
