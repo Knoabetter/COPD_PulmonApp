@@ -805,6 +805,14 @@ def clinical_analysis():
                 measured_values['FEV1_PRE'] = calculated_fev1
                 print(f"🔧 CALCULATED FEV1: {calculated_fev1:.2f}L from FVC={fvc}L × ratio={ratio:.3f}")
 
+            # Compute ratio from FEV1/FVC if not directly extracted
+            if (not measured_values.get('FEV 1 % FVC_PRE')
+                    and measured_values.get('FEV1_PRE')
+                    and measured_values.get('FVC_PRE')):
+                ratio = measured_values['FEV1_PRE'] / measured_values['FVC_PRE']
+                measured_values['FEV 1 % FVC_PRE'] = ratio
+                print(f"🔧 CALCULATED FEV1/FVC ratio: {ratio:.3f}")
+
 
             # Perform calculations and interpretation
             if CLINICAL_INTERPRETER_AVAILABLE:
