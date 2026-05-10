@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import DiagnosticCriteriaButtons from './DiagnosticCriteriaButtons';
 import type { AnalysisResults } from './types';
+import { t } from '../../translations';
 
 type Props = {
   analysisResults: AnalysisResults;
@@ -78,33 +79,27 @@ const sevConfig = (pattern: string, severity: string) => {
 
 const summaryLine = (pattern: string): string => {
   const lc = pattern.toLowerCase();
-  if (lc.includes('normal') && !lc.includes('non'))
-    return 'Spirometry is within normal limits for age, sex, and height.';
-  if (lc.includes('non-specific'))
-    return 'FVC is reduced with a normal FEV1/FVC ratio. TLC measurement is required to distinguish restrictive from non-specific pattern.';
-  if (lc.includes('mixed'))
-    return 'Combined obstructive and restrictive pattern detected. Full PFT panel recommended.';
-  if (lc.includes('restrict'))
-    return 'Possible restrictive ventilatory defect. TLC measurement is required to confirm.';
-  if (lc.includes('obstruct') || lc.includes('copd'))
-    return 'FEV1/FVC ratio is below the lower limit of normal, indicating an obstructive ventilatory defect.';
-  return 'Clinical correlation recommended.';
+  if (lc.includes('normal') && !lc.includes('non')) return t.summaryNormal;
+  if (lc.includes('non-specific'))                   return t.summaryNonSpecific;
+  if (lc.includes('mixed'))                          return t.summaryMixed;
+  if (lc.includes('restrict'))                       return t.summaryRestrictive;
+  if (lc.includes('obstruct') || lc.includes('copd')) return t.summaryObstructive;
+  return t.summaryDefault;
 };
 
 const nextAction = (pattern: string, hasBD: boolean): { text: string; urgent: boolean } => {
   const lc = pattern.toLowerCase();
   if (lc.includes('normal') && !lc.includes('non'))
-    return { text: 'No additional spirometry testing required. Correlate with clinical symptoms.', urgent: false };
+    return { text: t.nextNormal, urgent: false };
   if (lc.includes('non-specific') || (lc.includes('restrict') && !lc.includes('obstruct')))
-    return { text: 'Measure total lung capacity (TLC) by body plethysmography or helium dilution to confirm or exclude a restrictive pattern.', urgent: true };
+    return { text: t.nextTlcRequired, urgent: true };
   if (lc.includes('obstruct') || lc.includes('copd')) {
-    if (!hasBD)
-      return { text: 'Bronchodilator test recommended if not already performed to assess reversibility.', urgent: false };
-    return { text: 'Obstructive pattern confirmed. Clinical correlation and follow-up per GOLD/COPD guidelines.', urgent: false };
+    if (!hasBD) return { text: t.nextObstructiveNoBd, urgent: false };
+    return { text: t.nextObstructiveWithBd, urgent: false };
   }
   if (lc.includes('mixed'))
-    return { text: 'Full pulmonary function testing including lung volumes (TLC) and diffusion capacity (DLCO) recommended.', urgent: true };
-  return { text: 'Clinical correlation recommended. Consider repeat spirometry if findings are inconsistent.', urgent: false };
+    return { text: t.nextMixed, urgent: true };
+  return { text: t.nextDefault, urgent: false };
 };
 
 const deriveSteps = (analysisResults: AnalysisResults): string[] => {
@@ -119,26 +114,27 @@ const deriveSteps = (analysisResults: AnalysisResults): string[] => {
 
   if (m?.ratio != null && ratioLLN != null) {
     if (m.ratio < ratioLLN) {
-      steps.push(`FEV1/FVC ratio (${fmt(m.ratio, 3)}) is below LLN (${fmt(ratioLLN, 3)}) → obstruction present`);
+      steps.push(t.deriveRatioBelow(fmt(m.ratio, 3), fmt(ratioLLN, 3)));
       if (fev1Pct != null) {
         const sev =
-          fev1Pct >= 80 ? 'Mild (FEV1 ≥ 80% pred)' :
-          fev1Pct >= 50 ? 'Moderate (FEV1 50–79% pred)' :
-          fev1Pct >= 30 ? 'Severe (FEV1 30–49% pred)' : 'Very Severe (FEV1 < 30% pred)';
-        steps.push(`FEV1 is ${Math.round(fev1Pct)}% predicted → ${sev}`);
+          fev1Pct >= 80 ? t.deriveSevMild(String(Math.round(fev1Pct))) :
+          fev1Pct >= 50 ? t.deriveSevModerate(String(Math.round(fev1Pct))) :
+          fev1Pct >= 30 ? t.deriveSevSevere(String(Math.round(fev1Pct))) :
+                          t.deriveSevVerySevere(String(Math.round(fev1Pct)));
+        steps.push(sev);
       }
     } else {
-      steps.push(`FEV1/FVC ratio (${fmt(m.ratio, 3)}) ≥ LLN (${fmt(ratioLLN, 3)}) → no obstruction`);
+      steps.push(t.deriveRatioAbove(fmt(m.ratio, 3), fmt(ratioLLN, 3)));
       if (m.FVC != null && fvcLLN != null) {
         if (m.FVC < fvcLLN) {
-          steps.push(`FVC (${fmt(m.FVC)} L) is below LLN (${fmt(fvcLLN)} L) → reduced FVC with normal ratio`);
-          steps.push(`TLC required to distinguish restrictive from non-specific pattern`);
+          steps.push(t.deriveFvcBelowLln(fmt(m.FVC), fmt(fvcLLN)));
+          steps.push(t.deriveTlcNeeded);
         } else if (m.FEV1 != null && fev1LLN != null && m.FEV1 < fev1LLN) {
-          steps.push(`FVC (${fmt(m.FVC)} L) ≥ LLN, but FEV1 (${fmt(m.FEV1)} L) < LLN (${fmt(fev1LLN)} L) → non-specific pattern`);
+          steps.push(t.deriveFev1NonSpec(fmt(m.FVC), fmt(m.FEV1), fmt(fev1LLN)));
         } else {
-          steps.push(`FVC (${fmt(m.FVC)} L) ≥ LLN (${fmt(fvcLLN)} L) → FVC normal`);
+          steps.push(t.deriveFvcNormal(fmt(m.FVC), fmt(fvcLLN)));
           if (m.FEV1 != null && fev1LLN != null && m.FEV1 >= fev1LLN) {
-            steps.push(`FEV1 (${fmt(m.FEV1)} L) ≥ LLN (${fmt(fev1LLN)} L) → normal spirometry confirmed`);
+            steps.push(t.deriveFev1Normal(fmt(m.FEV1), fmt(fev1LLN)));
           }
         }
       }
@@ -149,32 +145,24 @@ const deriveSteps = (analysisResults: AnalysisResults): string[] => {
   if (bd?.has_post_bd) {
     if (bd.overall_significant) {
       const d = bd.fev1?.delta_l != null ? ` (Δ${(bd.fev1.delta_l * 1000).toFixed(0)} mL, ${bd.fev1.delta_pct_pred?.toFixed(1)}% pred)` : '';
-      steps.push(`Bronchodilator response: significant${d} → reversible component present`);
+      steps.push(t.deriveBdSignificant(d));
     } else {
-      steps.push('Bronchodilator response: not significant → fixed airflow limitation');
+      steps.push(t.deriveBdNotSignificant);
     }
   }
   return steps;
 };
 
-const QUICK_PHRASES = [
-  'Spirometry within normal limits',
-  'Suspected restrictive pattern — TLC recommended',
-  'Obstructive ventilatory defect confirmed',
-  'Significant bronchodilator response',
-  'No significant bronchodilator response',
-  'Correlate clinically',
-  'Repeat spirometry recommended',
-];
+const QUICK_PHRASES = [t.qp1, t.qp2, t.qp3, t.qp4, t.qp5, t.qp6, t.qp7];
 
 const criteriaLabels: Record<string, string> = {
-  restrictive: 'Restrictive pattern',
-  obstructive: 'Obstructive pattern',
-  bronchodilator: 'Bronchodilator response',
-  lungVolumes: 'Lung volumes',
-  airTrapping: 'Air trapping',
-  diffusion: 'Diffusion capacity (DLCO/KCO)',
-  dlcoCorrection: 'DLCO correction for alveolar volume',
+  restrictive:    t.criteriaRestrictive,
+  obstructive:    t.criteriaObstructive,
+  bronchodilator: t.criteriaBronchodilator,
+  lungVolumes:    t.criteriaLungVolumes,
+  airTrapping:    t.criteriaAirTrapping,
+  diffusion:      t.criteriaDiffusion,
+  dlcoCorrection: t.criteriaDlcoCorrection,
 };
 
 // ── Main component ────────────────────────────────────────────────
@@ -245,35 +233,35 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
   // ── Note generation ───────────────────────────────────────────
   const generateNote = (criteria: Record<string, string>): string => {
     const today = new Date().toLocaleDateString('en-GB');
-    const lines = [`Spirometry Report — ${today}`];
+    const lines = [t.noteReportTitle(today)];
     const parts: string[] = [];
-    if (p?.age)    parts.push(`Age: ${p.age} yr`);
-    if (p?.sex)    parts.push(`Sex: ${p.sex}`);
-    if (p?.height) parts.push(`Height: ${p.height} cm`);
+    if (p?.age)    parts.push(`${t.ageLabel}: ${p.age} ${t.yrUnit}`);
+    if (p?.sex)    parts.push(`${t.sexLabel}: ${p.sex}`);
+    if (p?.height) parts.push(`${t.htLabel}: ${p.height} ${t.cmUnit}`);
     if (parts.length) lines.push(parts.join(' | '));
-    lines.push('', 'Measured Values:');
+    lines.push('', t.noteMeasuredValues);
     if (m?.FEV1 != null) {
       const pct = gl?.FEV1?.percent ?? mu?.FEV1?.percent;
-      lines.push(`  FEV1:     ${fmt(m.FEV1)} L${pct != null ? ` (${pct}% pred)` : ''}`);
+      lines.push(`  FEV1:     ${fmt(m.FEV1)} ${t.lUnit}${pct != null ? ` (${pct}% pred)` : ''}`);
     }
     if (m?.FVC != null) {
       const pct = gl?.FVC?.percent ?? mu?.FVC?.percent;
-      lines.push(`  FVC:      ${fmt(m.FVC)} L${pct != null ? ` (${pct}% pred)` : ''}`);
+      lines.push(`  FVC:      ${fmt(m.FVC)} ${t.lUnit}${pct != null ? ` (${pct}% pred)` : ''}`);
     }
     if (m?.ratio != null) lines.push(`  FEV1/FVC: ${fmt(m.ratio, 3)}`);
     if (ersPattern) {
-      lines.push('', `Interpretation (ERS/ATS 2022): ${ersPattern}`);
-      if (ersSeverity) lines.push(`Severity: ${ersSeverity}`);
+      lines.push('', t.noteInterpretation(ersPattern));
+      if (ersSeverity) lines.push(t.noteSeverity(ersSeverity));
     }
-    if (tradPattern) lines.push(`Traditional (GOLD): ${tradPattern}`);
-    if (action) lines.push('', `Recommendation: ${action.text}`);
+    if (tradPattern) lines.push(t.noteTraditional(tradPattern));
+    if (action) lines.push('', t.noteRecommendation(action.text));
     const sel = Object.entries(criteria).filter(([, v]) => v);
     if (sel.length) {
-      lines.push('', 'Clinical Findings:');
+      lines.push('', t.noteClinicalFindings);
       sel.forEach(([k, v]) => lines.push(`  ${criteriaLabels[k] ?? k}: ${v}`));
     }
-    if (physicianNotes.trim()) lines.push('', 'Notes:', physicianNotes.trim());
-    lines.push('', 'Based on: ERS/ATS 2022 | GLI 2012 Reference Equations');
+    if (physicianNotes.trim()) lines.push('', t.noteNotes, physicianNotes.trim());
+    lines.push('', t.noteBasedOn);
     return lines.join('\n');
   };
 
@@ -311,7 +299,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
       {validationWarnings.length > 0 && (
         <div className="border-l-4 border-amber-400 bg-amber-50 rounded-xl px-5 py-4 space-y-2">
           <div className="flex items-center gap-2 text-base font-bold text-amber-800">
-            <AlertTriangle className="w-5 h-5" /> Extraction Warnings — verify values before proceeding
+            <AlertTriangle className="w-5 h-5" /> {t.extractionWarnings}
           </div>
           {validationWarnings.map((w, i) => (
             <p key={i} className="text-sm text-amber-700 flex items-start gap-2 pl-1">
@@ -325,22 +313,22 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
       {(p?.age || p?.sex || p?.height) && (
         <div className="bg-slate-900 rounded-xl px-5 py-3 flex flex-wrap items-center gap-x-7 gap-y-1.5 shadow-md">
           <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-            <User className="w-3.5 h-3.5" /> Patient
+            <User className="w-3.5 h-3.5" /> {t.patientLabel}
           </span>
-          {p?.age    && <span className="text-slate-400 text-xs">Age <span className="font-bold text-cyan-400 text-sm ml-1">{p.age}</span><span className="text-slate-600 text-xs ml-0.5">yr</span></span>}
-          {p?.sex    && <span className="text-slate-400 text-xs">Sex <span className="font-bold text-cyan-400 text-sm ml-1">{p.sex}</span></span>}
-          {p?.height && <span className="text-slate-400 text-xs">Ht <span className="font-bold text-cyan-400 text-sm ml-1">{p.height}</span><span className="text-slate-600 text-xs ml-0.5">cm</span></span>}
+          {p?.age    && <span className="text-slate-400 text-xs">{t.ageLabel} <span className="font-bold text-cyan-400 text-sm ms-1">{p.age}</span><span className="text-slate-600 text-xs ms-0.5">{t.yrUnit}</span></span>}
+          {p?.sex    && <span className="text-slate-400 text-xs">{t.sexLabel} <span className="font-bold text-cyan-400 text-sm ms-1">{p.sex}</span></span>}
+          {p?.height && <span className="text-slate-400 text-xs">{t.htLabel} <span className="font-bold text-cyan-400 text-sm ms-1">{p.height}</span><span className="text-slate-600 text-xs ms-0.5">{t.cmUnit}</span></span>}
           <span className="w-px h-4 bg-slate-700 hidden sm:block" />
-          {ei?.fev1_pre && <span className="text-slate-400 text-xs">FEV1 <span className="font-bold text-sky-400 text-sm ml-1">{ei.fev1_pre}</span><span className="text-slate-600 text-xs ml-0.5">L</span></span>}
-          {ei?.fvc_pre  && <span className="text-slate-400 text-xs">FVC  <span className="font-bold text-sky-400 text-sm ml-1">{ei.fvc_pre}</span><span className="text-slate-600 text-xs ml-0.5">L</span></span>}
+          {ei?.fev1_pre && <span className="text-slate-400 text-xs">FEV1 <span className="font-bold text-sky-400 text-sm ms-1">{ei.fev1_pre}</span><span className="text-slate-600 text-xs ms-0.5">{t.lUnit}</span></span>}
+          {ei?.fvc_pre  && <span className="text-slate-400 text-xs">FVC  <span className="font-bold text-sky-400 text-sm ms-1">{ei.fvc_pre}</span><span className="text-slate-600 text-xs ms-0.5">{t.lUnit}</span></span>}
           {ei?.ratio_pre && (
             <span className="text-slate-400 text-xs">
-              FEV1/FVC <span className="font-bold text-sky-400 text-sm ml-1">
+              FEV1/FVC <span className="font-bold text-sky-400 text-sm ms-1">
                 {Number(ei.ratio_pre) > 1 ? (ei.ratio_pre / 100).toFixed(2) : Number(ei.ratio_pre).toFixed(2)}
               </span>
             </span>
           )}
-          <span className="ml-auto text-xs text-slate-600 italic">Verify before accepting results</span>
+          <span className="ms-auto text-xs text-slate-600 italic">{t.verifyBeforeAccepting}</span>
         </div>
       )}
 
@@ -350,7 +338,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
           <div className="px-6 py-5">
             {/* Header label */}
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
-              Clinical Interpretation — ERS/ATS 2022
+              {t.clinicalInterpretationLabel}
             </p>
 
             {/* Pattern + agreement badge */}
@@ -366,15 +354,15 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
               <div className="flex flex-col items-end gap-2 shrink-0">
                 {methodsAgree ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <CheckCircle2 className="w-4 h-4" /> Methods agree
+                    <CheckCircle2 className="w-4 h-4" /> {t.methodsAgree}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                    <AlertCircle className="w-4 h-4" /> Methods disagree
+                    <AlertCircle className="w-4 h-4" /> {t.methodsDisagree}
                   </span>
                 )}
                 {tradPattern && (
-                  <span className="text-xs text-slate-500">Traditional GOLD: <span className="font-semibold">{tradPattern}</span></span>
+                  <span className="text-xs text-slate-500">{t.traditionalGold} <span className="font-semibold">{tradPattern}</span></span>
                 )}
               </div>
             </div>
@@ -387,12 +375,12 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
               <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-slate-100">
                 {ers2022?.fev1_z_score != null && (
                   <span className="text-sm text-slate-500">
-                    FEV1 Z-score: <span className="font-bold text-slate-800">{Number(ers2022.fev1_z_score).toFixed(2)}</span>
+                    {t.colFev1} {t.colZScore}: <span className="font-bold text-slate-800">{Number(ers2022.fev1_z_score).toFixed(2)}</span>
                   </span>
                 )}
                 {ers2022?.fvc_z_score != null && (
                   <span className="text-sm text-slate-500">
-                    FVC Z-score: <span className="font-bold text-slate-800">{Number(ers2022.fvc_z_score).toFixed(2)}</span>
+                    {t.colFvc} {t.colZScore}: <span className="font-bold text-slate-800">{Number(ers2022.fvc_z_score).toFixed(2)}</span>
                   </span>
                 )}
               </div>
@@ -404,7 +392,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             <div className="border-t border-blue-100 bg-blue-50 px-6 py-3 flex items-center gap-2.5">
               <FlaskConical className="w-4 h-4 text-blue-600 shrink-0" />
               <p className="text-sm text-blue-800 font-medium">
-                TLC measurement required — spirometry alone cannot confirm restriction.
+                {t.tlcRequired}
               </p>
             </div>
           )}
@@ -415,20 +403,20 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2.5 bg-slate-50">
           <Activity className="w-4 h-4 text-slate-500" />
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Evidence — Measured Values</h3>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.evidenceTitle}</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                <th className="px-5 py-3 text-left">Param</th>
-                <th className="px-4 py-3 text-right">Measured</th>
-                <th className="px-4 py-3 text-right">GLI Pred</th>
-                <th className="px-4 py-3 text-right">GLI LLN</th>
-                <th className="px-4 py-3 text-right">% Pred</th>
-                <th className="px-4 py-3 text-right">Z-score</th>
-                <th className="px-5 py-3 text-left">Range</th>
-                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-5 py-3 text-start">{t.colParam}</th>
+                <th className="px-4 py-3 text-end">{t.colMeasured}</th>
+                <th className="px-4 py-3 text-end">{t.colGliPred}</th>
+                <th className="px-4 py-3 text-end">{t.colGliLln}</th>
+                <th className="px-4 py-3 text-end">{t.colPctPred}</th>
+                <th className="px-4 py-3 text-end">{t.colZScore}</th>
+                <th className="px-5 py-3 text-start">{t.colRange}</th>
+                <th className="px-4 py-3 text-start">{t.colStatus}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -442,19 +430,19 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
                 return (
                   <tr key={row.name} className="hover:bg-slate-50/60">
                     <td className="px-5 py-3.5 font-bold text-slate-900">{row.name}</td>
-                    <td className="px-4 py-3.5 text-right font-bold text-blue-700 font-mono">
-                      {fmt(row.measured)}{row.unit && <span className="text-blue-400 font-normal text-xs ml-0.5">{row.unit}</span>}
+                    <td className="px-4 py-3.5 text-end font-bold text-blue-700 font-mono">
+                      {fmt(row.measured)}{row.unit && <span className="text-blue-400 font-normal text-xs ms-0.5">{row.unit}</span>}
                     </td>
-                    <td className="px-4 py-3.5 text-right text-slate-500 font-mono">{fmt(row.gliPred)}</td>
-                    <td className="px-4 py-3.5 text-right text-slate-500 font-mono">{fmt(lln)}</td>
-                    <td className={`px-4 py-3.5 text-right font-mono font-bold ${
+                    <td className="px-4 py-3.5 text-end text-slate-500 font-mono">{fmt(row.gliPred)}</td>
+                    <td className="px-4 py-3.5 text-end text-slate-500 font-mono">{fmt(lln)}</td>
+                    <td className={`px-4 py-3.5 text-end font-mono font-bold ${
                       pct == null ? 'text-slate-400' :
                       pct >= 100  ? 'text-emerald-700' :
                       pct >= (llnPct || 80) ? 'text-amber-700' : 'text-red-700'
                     }`}>
                       {pct != null ? `${pct}%` : '—'}
                     </td>
-                    <td className="px-4 py-3.5 text-right font-mono text-slate-600">
+                    <td className="px-4 py-3.5 text-end font-mono text-slate-600">
                       {row.zScore != null ? Number(row.zScore).toFixed(2) : '—'}
                     </td>
                     <td className="px-5 py-3.5">
@@ -465,11 +453,11 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
                         <span className="text-xs text-slate-400">—</span>
                       ) : isAboveLLN ? (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Normal
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{t.normalStatus}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />Below LLN
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />{t.belowLln}
                         </span>
                       )}
                     </td>
@@ -486,14 +474,14 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
         <div className={`border rounded-xl overflow-hidden shadow-sm ${bd.overall_significant ? 'border-emerald-200' : 'border-slate-200'}`}>
           <div className={`px-5 py-3 flex items-center gap-2.5 border-b ${bd.overall_significant ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
             <Activity className={`w-4 h-4 ${bd.overall_significant ? 'text-emerald-600' : 'text-slate-400'}`} />
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Bronchodilator Response</h3>
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.bronchodilatorTitle}</h3>
             {bd.overall_significant ? (
-              <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                <CheckCircle2 className="w-3.5 h-3.5" />Significant
+              <span className="ms-auto inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5" />{t.significant}
               </span>
             ) : (
-              <span className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                Not significant
+              <span className="ms-auto text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                {t.notSignificant}
               </span>
             )}
           </div>
@@ -501,12 +489,12 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-slate-500 font-semibold border-b border-slate-100">
-                  <th className="text-left pb-2">Param</th>
-                  <th className="text-right pb-2">Pre-BD</th>
-                  <th className="text-right pb-2">Post-BD</th>
-                  <th className="text-right pb-2">Δ mL</th>
-                  <th className="text-right pb-2">Δ % pred</th>
-                  <th className="text-right pb-2">Criterion</th>
+                  <th className="text-start pb-2">{t.colParam}</th>
+                  <th className="text-end pb-2">{t.colPreBd}</th>
+                  <th className="text-end pb-2">{t.colPostBd}</th>
+                  <th className="text-end pb-2">{t.colDeltaMl}</th>
+                  <th className="text-end pb-2">{t.colDeltaPctPred}</th>
+                  <th className="text-end pb-2">{t.colCriterion}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -521,28 +509,28 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
                     <td className={`py-2.5 text-right font-mono ${bd.fev1.significant ? 'text-emerald-700 font-bold' : 'text-slate-600'}`}>
                       {bd.fev1.delta_pct_pred != null ? `${bd.fev1.delta_pct_pred.toFixed(1)}%` : '—'}
                     </td>
-                    <td className="py-2.5 text-right">
+                    <td className="py-2.5 text-end">
                       {bd.fev1.significant
-                        ? <span className="text-xs text-emerald-700 font-semibold">✓ ≥150 mL + ≥10%</span>
-                        : <span className="text-xs text-slate-400">below threshold</span>}
+                        ? <span className="text-xs text-emerald-700 font-semibold">{t.bdThreshold}</span>
+                        : <span className="text-xs text-slate-400">{t.bdBelowThreshold}</span>}
                     </td>
                   </tr>
                 )}
                 {bd.fvc?.pre != null && (
                   <tr>
                     <td className="py-2.5 font-bold text-slate-800">FVC</td>
-                    <td className="py-2.5 text-right font-mono text-slate-700">{bd.fvc.pre} L</td>
-                    <td className="py-2.5 text-right font-mono text-slate-700">{bd.fvc.post} L</td>
-                    <td className={`py-2.5 text-right font-mono ${bd.fvc.significant ? 'text-emerald-700 font-bold' : 'text-slate-600'}`}>
+                    <td className="py-2.5 text-end font-mono text-slate-700">{bd.fvc.pre} {t.lUnit}</td>
+                    <td className="py-2.5 text-end font-mono text-slate-700">{bd.fvc.post} {t.lUnit}</td>
+                    <td className={`py-2.5 text-end font-mono ${bd.fvc.significant ? 'text-emerald-700 font-bold' : 'text-slate-600'}`}>
                       {bd.fvc.delta_l != null ? `${(bd.fvc.delta_l * 1000).toFixed(0)} mL` : '—'}
                     </td>
-                    <td className={`py-2.5 text-right font-mono ${bd.fvc.significant ? 'text-emerald-700 font-bold' : 'text-slate-600'}`}>
+                    <td className={`py-2.5 text-end font-mono ${bd.fvc.significant ? 'text-emerald-700 font-bold' : 'text-slate-600'}`}>
                       {bd.fvc.delta_pct_pred != null ? `${bd.fvc.delta_pct_pred.toFixed(1)}%` : '—'}
                     </td>
-                    <td className="py-2.5 text-right">
+                    <td className="py-2.5 text-end">
                       {bd.fvc.significant
-                        ? <span className="text-xs text-emerald-700 font-semibold">✓ ≥150 mL + ≥10%</span>
-                        : <span className="text-xs text-slate-400">below threshold</span>}
+                        ? <span className="text-xs text-emerald-700 font-semibold">{t.bdThreshold}</span>
+                        : <span className="text-xs text-slate-400">{t.bdBelowThreshold}</span>}
                     </td>
                   </tr>
                 )}
@@ -563,7 +551,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             className="w-full px-5 py-3.5 flex items-center gap-2.5 text-left hover:bg-slate-50 transition-colors"
           >
             <Info className="w-4 h-4 text-slate-400 shrink-0" />
-            <span className="text-sm font-bold text-slate-700 uppercase tracking-wider">How this result was derived</span>
+            <span className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.derivationTitle}</span>
             <span className="ml-auto">
               {logicOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </span>
@@ -595,7 +583,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
           <div className={`px-5 py-3 flex items-center gap-2.5 border-b ${action.urgent ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
             <ArrowRight className={`w-4 h-4 shrink-0 ${action.urgent ? 'text-blue-600' : 'text-slate-400'}`} />
             <h3 className={`text-sm font-bold uppercase tracking-wider ${action.urgent ? 'text-blue-800' : 'text-slate-700'}`}>
-              Recommended Next Step
+              {t.nextStepTitle}
             </h3>
           </div>
           <div className="bg-white px-5 py-4 flex items-start justify-between gap-4">
@@ -603,9 +591,9 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             <button
               onClick={() => insertPhrase(action.text)}
               className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold transition-colors"
-              title="Insert into notes"
+              title={t.insertToNotes}
             >
-              + Notes
+              {t.insertToNotes}
             </button>
           </div>
         </div>
@@ -616,10 +604,10 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2.5">
             <Shield className="w-4 h-4 text-slate-500" />
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Method Comparison</h3>
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.methodComparisonTitle}</h3>
             {!methodsAgree && (
-              <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                <AlertTriangle className="w-3.5 h-3.5" />Methods disagree
+              <span className="ms-auto inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                <AlertTriangle className="w-3.5 h-3.5" />{t.methodsDisagree}
               </span>
             )}
           </div>
@@ -629,10 +617,10 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             <div className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-600" />
-                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">ERS/ATS 2022 (GLI)</span>
+                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">{t.ersGliLabel}</span>
               </div>
               <p className="text-lg font-black text-slate-900">{ers2022?.primary_pattern ?? '—'}</p>
-              {ers2022?.severity && <p className="text-sm text-slate-500 mt-0.5">Severity: {ers2022.severity}</p>}
+              {ers2022?.severity && <p className="text-sm text-slate-500 mt-0.5">{t.severityLabel} {ers2022.severity}</p>}
               {ers2022?.clinical_notes?.length > 0 && (
                 <ul className="mt-3 space-y-1.5">
                   {ers2022.clinical_notes.slice(0, 3).map((note: string, i: number) => (
@@ -649,10 +637,10 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             <div className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-500" />
-                <span className="text-xs font-bold text-orange-700 uppercase tracking-wider">Traditional GOLD (Murray)</span>
+                <span className="text-xs font-bold text-orange-700 uppercase tracking-wider">{t.goldMurrayLabel}</span>
               </div>
               <p className="text-lg font-black text-slate-900">{traditional?.primary_pattern ?? '—'}</p>
-              {traditional?.severity && <p className="text-sm text-slate-500 mt-0.5">Severity: {traditional.severity}</p>}
+              {traditional?.severity && <p className="text-sm text-slate-500 mt-0.5">{t.severityLabel} {traditional.severity}</p>}
               {traditional?.clinical_notes?.length > 0 && (
                 <ul className="mt-3 space-y-1.5">
                   {traditional.clinical_notes.slice(0, 3).map((note: string, i: number) => (
@@ -719,18 +707,18 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2.5">
           <FileText className="w-4 h-4 text-slate-500" />
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Physician Notes</h3>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.physicianNotesTitle}</h3>
           <button
             onClick={handleCopy}
             disabled={!physicianNotes}
-            className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`ms-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               copied ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
               : physicianNotes ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               : 'bg-slate-50 text-slate-300 cursor-not-allowed'
             }`}
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? t.copied : t.copy}
           </button>
         </div>
 
@@ -738,7 +726,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
           {/* Quick-insert chips */}
           <div>
             <p className="text-xs text-slate-400 font-semibold mb-2 flex items-center gap-1.5">
-              <Stethoscope className="w-3.5 h-3.5" /> Quick insert
+              <Stethoscope className="w-3.5 h-3.5" /> {t.quickInsert}
             </p>
             <div className="flex flex-wrap gap-2">
               {QUICK_PHRASES.map(phrase => (
@@ -756,7 +744,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
           {/* Diagnostic criteria dropdowns */}
           <div>
             <p className="text-xs text-slate-400 font-semibold mb-2 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5" /> Select findings to populate note
+              <BookOpen className="w-3.5 h-3.5" /> {t.selectFindings}
             </p>
             <DiagnosticCriteriaButtons onCriteriaSelect={handleCriteriaSelect} inline={true} />
           </div>
@@ -765,7 +753,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
           <textarea
             value={physicianNotes}
             onChange={e => setPhysicianNotes(e.target.value)}
-            placeholder="Select criteria above or use quick insert, or type directly..."
+            placeholder={t.noteTextareaPlaceholder}
             className="w-full h-44 p-4 border border-slate-200 rounded-xl text-sm font-mono resize-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none text-slate-700 placeholder-slate-400 bg-slate-50/50"
           />
 
@@ -775,10 +763,10 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
               onClick={handleDownload}
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold shadow-sm transition-colors"
             >
-              <Download className="w-4 h-4" /> Download Report
+              <Download className="w-4 h-4" /> {t.downloadReportBtn}
             </button>
             <button className="flex items-center gap-2 px-4 py-2.5 bg-slate-700 text-white rounded-xl hover:bg-slate-800 text-sm font-semibold shadow-sm transition-colors">
-              <Eye className="w-4 h-4" /> Add to Research DB
+              <Eye className="w-4 h-4" /> {t.addToResearchDb}
             </button>
           </div>
         </div>
@@ -791,7 +779,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
           className="w-full px-5 py-3.5 flex items-center gap-2.5 text-left hover:bg-slate-50 transition-colors"
         >
           <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
-          <span className="text-sm font-bold text-slate-700 uppercase tracking-wider">Guideline Traceability</span>
+          <span className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.guidelineTraceability}</span>
           <span className="ml-auto">
             {guideOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </span>
@@ -800,7 +788,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
           <div className="border-t border-slate-100 px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-600">
             <div>
               <p className="font-semibold text-slate-800 mb-1 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500" /> ERS/ATS 2022 Method
+                <span className="w-2 h-2 rounded-full bg-blue-500" /> {t.ersAtsMethod}
               </p>
               <ul className="space-y-0.5 text-xs text-slate-500">
                 <li>• Graham BL et al. ERS/ATS Technical Standards 2019</li>
@@ -811,7 +799,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             </div>
             <div>
               <p className="font-semibold text-slate-800 mb-1 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-orange-500" /> Traditional GOLD Method
+                <span className="w-2 h-2 rounded-full bg-orange-500" /> {t.goldMethod}
               </p>
               <ul className="space-y-0.5 text-xs text-slate-500">
                 <li>• Murray CJ et al. Traditional Reference Equations</li>
@@ -822,8 +810,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             </div>
             <div className="sm:col-span-2 border-t border-slate-100 pt-3 mt-1">
               <p className="text-xs text-slate-400 italic">
-                <strong>Ethnic equity note:</strong> GLI 2012 equations were derived primarily from European/Caucasian populations.
-                For non-European patients, consider GLI 2021 equations with broader ethnic coverage where available.
+                {t.ethnicEquityNote}
               </p>
             </div>
           </div>

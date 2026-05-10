@@ -1,25 +1,23 @@
 import { Stethoscope, BarChart3, Activity, AlertTriangle } from 'lucide-react';
+import { t } from '../../../translations';
 
-// Extended PFT Display Component
 const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
-  if (!clinicalInterpretation?.has_extended_data) {
-    return null;
-  }
+  if (!clinicalInterpretation?.has_extended_data) return null;
 
   const lungVolumes = clinicalInterpretation.lung_volumes;
   const gasTransfer = clinicalInterpretation.gas_transfer;
   const completeSummary = clinicalInterpretation.complete_summary;
 
   const getPatternColor = (pattern) => {
-    if (pattern?.toLowerCase().includes('normal')) return 'text-green-600';
-    if (pattern?.toLowerCase().includes('restrictive')) return 'text-orange-600';
+    if (pattern?.toLowerCase().includes('normal'))        return 'text-green-600';
+    if (pattern?.toLowerCase().includes('restrictive'))   return 'text-orange-600';
     if (pattern?.toLowerCase().includes('hyperinflation')) return 'text-red-600';
-    if (pattern?.toLowerCase().includes('reduced')) return 'text-yellow-600';
+    if (pattern?.toLowerCase().includes('reduced'))       return 'text-yellow-600';
     return 'text-gray-600';
   };
 
   const getValueBgColor = (value) => {
-    if (value < 80) return 'bg-red-50 border-red-200';
+    if (value < 80)  return 'bg-red-50 border-red-200';
     if (value > 120) return 'bg-orange-50 border-orange-200';
     return 'bg-green-50 border-green-200';
   };
@@ -33,7 +31,7 @@ const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
             <Stethoscope className="w-4 h-4 mr-1.5" />
-            Integrated PFT Assessment
+            {t.extIntegratedTitle}
           </h3>
 
           <div className="flex flex-wrap items-baseline gap-3 mb-3">
@@ -46,7 +44,6 @@ const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
           </div>
 
           {completeSummary.key_findings && completeSummary.key_findings.length > 0 && (() => {
-            // Filter out pure-number lines (e.g. "FEV1: 65% predicted") — keep clinical sentences
             const clinical = completeSummary.key_findings.filter(
               (f: string) => f.length > 20 && !/^\s*(FEV1|FVC|TLC|RV|KCO|TLCO):\s*\d/.test(f)
             );
@@ -68,11 +65,11 @@ const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
         <div className="bg-white border rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <BarChart3 className="w-5 h-5 mr-2" />
-            Lung Volumes
+            {t.extLungVolumes}
           </h3>
 
           <div className="mb-4">
-            <div className="text-sm text-gray-600 mb-1">Pattern</div>
+            <div className="text-sm text-gray-600 mb-1">{t.extPatternLabel}</div>
             <div className={`font-semibold ${getPatternColor(lungVolumes.pattern)}`}>
               {lungVolumes.pattern}
             </div>
@@ -122,11 +119,11 @@ const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
         <div className="bg-white border rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Activity className="w-5 h-5 mr-2" />
-            Gas Transfer
+            {t.extGasTransfer}
           </h3>
 
           <div className="mb-4">
-            <div className="text-sm text-gray-600 mb-1">Pattern</div>
+            <div className="text-sm text-gray-600 mb-1">{t.extPatternLabel}</div>
             <div className={`font-semibold ${getPatternColor(gasTransfer.pattern)}`}>
               {gasTransfer.pattern}
             </div>

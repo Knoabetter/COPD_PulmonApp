@@ -1,13 +1,13 @@
 import { BookOpen, CheckCircle } from 'lucide-react';
+import { t } from '../../../translations';
 
-// Traditional GOLD Tab
 const TraditionalTab = ({ analysisResults }) => {
   const traditionalResults = analysisResults.clinical_interpretation?.traditional;
 
   if (!traditionalResults) {
     return (
       <div className="bg-white border rounded-lg p-6">
-        <p className="text-gray-500">Traditional interpretation not available</p>
+        <p className="text-gray-500">{t.tradNotAvailable}</p>
       </div>
     );
   }
@@ -26,26 +26,23 @@ const TraditionalTab = ({ analysisResults }) => {
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
         <div className="flex items-center mb-4">
           <BookOpen className="w-6 h-6 text-orange-600 mr-2" />
-          <h3 className="text-lg font-semibold text-orange-900">Traditional GOLD Method</h3>
+          <h3 className="text-lg font-semibold text-orange-900">{t.tradTabTitle}</h3>
         </div>
-        <p className="text-orange-700 text-sm">
-          Uses Murray traditional equations with fixed FEV1/FVC &lt; 0.70 threshold and 80% predicted LLN.
-          GOLD severity staging based on FEV1 % predicted.
-        </p>
+        <p className="text-orange-700 text-sm">{t.tradTabDesc}</p>
       </div>
 
       <div className="bg-white border rounded-lg p-6">
-        <h4 className="text-md font-semibold mb-4">GOLD Assessment</h4>
+        <h4 className="text-md font-semibold mb-4">{t.tradGoldAssessment}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className={`p-4 rounded-lg border ${getGoldColor(traditionalResults.severity)}`}>
             <div className="flex items-center justify-between">
-              <span className="font-medium">Pattern:</span>
+              <span className="font-medium">{t.tradPatternLabel}</span>
               <span className="font-semibold">{traditionalResults.primary_pattern}</span>
             </div>
           </div>
           <div className={`p-4 rounded-lg border ${getGoldColor(traditionalResults.severity)}`}>
             <div className="flex items-center justify-between">
-              <span className="font-medium">Severity:</span>
+              <span className="font-medium">{t.tradSeverityLabel}</span>
               <span className="font-semibold">{traditionalResults.severity}</span>
             </div>
           </div>
@@ -53,7 +50,7 @@ const TraditionalTab = ({ analysisResults }) => {
       </div>
 
       <div className="bg-white border rounded-lg p-6">
-        <h4 className="text-md font-semibold mb-4">Clinical Notes</h4>
+        <h4 className="text-md font-semibold mb-4">{t.tradClinicalNotes}</h4>
         <div className="space-y-2">
           {traditionalResults.clinical_notes?.map((note, index) => (
             <div key={index} className="flex items-start space-x-2">

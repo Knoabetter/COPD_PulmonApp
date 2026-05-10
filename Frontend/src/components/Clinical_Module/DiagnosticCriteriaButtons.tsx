@@ -1,97 +1,65 @@
 import { useState } from 'react';
 import { Stethoscope, ChevronDown } from 'lucide-react';
+import { t } from '../../translations';
 
-// Diagnostic Criteria Buttons Component
-// inline=true: renders just the dropdown grid with no outer card/header
 const DiagnosticCriteriaButtons = ({ onCriteriaSelect, compact = false, inline = false }) => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [selectedCriteria, setSelectedCriteria] = useState<Record<string, string>>({});
 
   const criteriaOptions = {
     restrictive: {
-      title: 'Restrictive patterns',
-      options: [
-        'No restrictive ventilatory defect',
-        'Mild restrictive ventilatory defect',
-        'Moderate restrictive ventilatory defect',
-        'Severe restrictive ventilatory defect'
-      ]
+      title: t.dcRestrictiveTitle,
+      options: [t.dcRestOpt1, t.dcRestOpt2, t.dcRestOpt3, t.dcRestOpt4],
     },
     obstructive: {
-      title: 'Obstructive patterns',
-      options: [
-        'No obstructive ventilatory defect',
-        'Mild obstructive ventilatory defect',
-        'Moderate obstructive ventilatory defect',
-        'Moderate–severe obstructive ventilatory defect',
-        'Severe obstructive ventilatory defect',
-        'Very severe obstructive ventilatory defect'
-      ]
+      title: t.dcObstructiveTitle,
+      options: [t.dcObstOpt1, t.dcObstOpt2, t.dcObstOpt3, t.dcObstOpt4, t.dcObstOpt5, t.dcObstOpt6],
     },
     bronchodilator: {
-      title: 'Bronchodilator response',
-      options: [
-        'No significant bronchodilator response',
-        'Partial bronchodilator response',
-        'Significant (positive) bronchodilator response',
-        'Bronchodilators not used/administrated'
-      ]
+      title: t.dcBronchodilatorTitle,
+      options: [t.dcBdOpt1, t.dcBdOpt2, t.dcBdOpt3, t.dcBdOpt4],
     },
     lungVolumes: {
-      title: 'Lung volumes',
-      options: [
-        'Lung volumes within normal limits',
-        'Reduced lung volumes; body plethysmography is recommended'
-      ]
+      title: t.dcLungVolumesTitle,
+      options: [t.dcLvOpt1, t.dcLvOpt2],
     },
     airTrapping: {
-      title: 'Air trapping',
-      options: [
-        'No air trapping present',
-        'Air trapping present',
-        'Severe air trapping'
-      ]
+      title: t.dcAirTrappingTitle,
+      options: [t.dcAtOpt1, t.dcAtOpt2, t.dcAtOpt3],
     },
     diffusion: {
-      title: 'Diffusion capacity (DLCO / KCO)',
-      options: [
-        'Preserved diffusion capacity',
-        'Mildly reduced diffusion capacity',
-        'Moderately reduced diffusion capacity',
-        'Severely reduced diffusion capacity'
-      ]
+      title: t.dcDiffusionTitle,
+      options: [t.dcDfOpt1, t.dcDfOpt2, t.dcDfOpt3, t.dcDfOpt4],
     },
     dlcoCorrection: {
-      title: 'DLCO correction for alveolar volume',
-      options: [
-        'Diffusion capacity normalizes after correction for alveolar volume (KCO normal)',
-        'Partial improvement in diffusion capacity after correction for alveolar volume',
-        'No improvement in diffusion capacity after correction for alveolar volume'
-      ]
-    }
+      title: t.dcDlcoCorrectionTitle,
+      options: [t.dcDcOpt1, t.dcDcOpt2, t.dcDcOpt3],
+    },
   };
 
   const handleOptionSelect = (category, option) => {
     const newSelection = { ...selectedCriteria, [category]: option };
     setSelectedCriteria(newSelection);
     setOpenDropdown(null);
-    if (onCriteriaSelect) {
-      onCriteriaSelect(newSelection);
-    }
+    if (onCriteriaSelect) onCriteriaSelect(newSelection);
   };
 
   const toggleDropdown = (category) => {
     setOpenDropdown(openDropdown === category ? null : category);
   };
 
-  const getSeverityColor = (option) => {
-    if (option.toLowerCase().includes('no ') || option.toLowerCase().includes('normal') || option.toLowerCase().includes('preserved')) {
+  const getSeverityColor = (option: string) => {
+    // Hebrew severity detection
+    if (option.includes('ללא') || option.includes('שמורה') || option.includes('נורמה') || option.includes('תקין')) {
       return 'text-green-600';
-    } else if (option.toLowerCase().includes('mild')) {
+    }
+    if (option.includes('קלה') || option.includes('קל') || option.includes('חלקי')) {
       return 'text-yellow-600';
-    } else if (option.toLowerCase().includes('moderate')) {
+    }
+    if (option.includes('בינונית') || option.includes('בינוני')) {
       return 'text-orange-600';
-    } else if (option.toLowerCase().includes('severe')) {
+    }
+    if (option.includes('קשה')) {
       return 'text-red-600';
     }
     return 'text-gray-700';
@@ -105,7 +73,7 @@ const DiagnosticCriteriaButtons = ({ onCriteriaSelect, compact = false, inline =
         <div key={key} className="relative">
           <button
             onClick={() => toggleDropdown(key)}
-            className={`w-full text-left ${isCompact ? 'px-3 py-2' : 'px-4 py-3'} bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all`}
+            className={`w-full text-start ${isCompact ? 'px-3 py-2' : 'px-4 py-3'} bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all`}
           >
             <div className="flex items-center justify-between">
               <span className={`font-medium text-gray-700 ${isCompact ? 'text-sm' : ''}`}>{criteria.title}</span>
@@ -128,7 +96,7 @@ const DiagnosticCriteriaButtons = ({ onCriteriaSelect, compact = false, inline =
                 <button
                   key={index}
                   onClick={() => handleOptionSelect(key, option)}
-                  className={`w-full text-left ${isCompact ? 'px-3 py-2' : 'px-4 py-3'} hover:bg-gray-50 transition-colors border-b last:border-b-0 ${
+                  className={`w-full text-start ${isCompact ? 'px-3 py-2' : 'px-4 py-3'} hover:bg-gray-50 transition-colors border-b last:border-b-0 ${
                     selectedCriteria[key] === option ? 'bg-blue-50' : ''
                   }`}
                 >
@@ -148,9 +116,9 @@ const DiagnosticCriteriaButtons = ({ onCriteriaSelect, compact = false, inline =
 
   return (
     <div className={`bg-white border rounded-lg ${compact ? 'p-4' : 'p-6'}`}>
-      <h3 className={`${compact ? 'text-md' : 'text-lg'} font-semibold text-gray-900 mb-4 flex items-center`}>
-        <Stethoscope className="w-5 h-5 mr-2" />
-        Diagnostic Criteria Selection
+      <h3 className={`${compact ? 'text-md' : 'text-lg'} font-semibold text-gray-900 mb-4 flex items-center gap-2`}>
+        <Stethoscope className="w-5 h-5" />
+        {t.dcTitle}
       </h3>
       {dropdownGrid}
     </div>
