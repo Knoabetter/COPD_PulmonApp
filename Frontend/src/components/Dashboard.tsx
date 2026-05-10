@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Activity, BarChart3, Home, ChevronRight } from 'lucide-react';
 import ClinicalAnalysisModule from './Clinical_Module/ClinicalAnalysisModule';
 import ResearchModule from './ResearchModule';
+import { t } from '../translations';
 
 interface DashboardProps {
   username: string;
@@ -34,14 +35,14 @@ function Dashboard({ username }: DashboardProps) {
                 <span className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
                   <Home className="w-3.5 h-3.5 text-white" />
                 </span>
-                <span className="font-bold text-base tracking-tight">PulmonApp</span>
+                <span className="font-bold text-base tracking-tight">{t.appTitle}</span>
               </button>
 
               {activeModule !== 'home' && (
-                <div className="flex items-center gap-1.5 ml-2 text-sm">
+                <div className="flex items-center gap-1.5 ms-2 text-sm">
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                   <span className="text-slate-500 font-medium">
-                    {activeModule === 'clinical' ? 'Spirometry Analysis' : 'Research Module'}
+                    {activeModule === 'clinical' ? t.breadcrumbSpirometry : t.breadcrumbResearch}
                   </span>
                 </div>
               )}
@@ -54,7 +55,7 @@ function Dashboard({ username }: DashboardProps) {
                   onClick={() => setActiveModule('home')}
                   className="text-xs text-slate-500 hover:text-blue-600 font-medium transition-colors"
                 >
-                  ← Home
+                  {t.homeNavButton}
                 </button>
               )}
             </div>
@@ -76,23 +77,22 @@ function HomePage({ onNavigate }: { onNavigate: (m: 'clinical' | 'research') => 
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-blue-700 text-xs font-semibold mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-          Pulmonary Institute · Tel Aviv Sourasky Medical Center
+          {t.institutionBadge}
         </div>
 
         <div className="flex justify-center mb-5">
           <img
             src="/images/tasmd_logo.jpeg"
-            alt="Tel Aviv Sourasky Medical Center"
+            alt={t.institutionName}
             className="w-20 h-20 object-contain rounded-xl"
           />
         </div>
 
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-          PulmonApp
+          {t.appTitle}
         </h1>
         <p className="mt-2 text-slate-500 text-sm max-w-md mx-auto">
-          Spirometry analysis and research platform for pulmonary function testing
-          using Murray and GLI 2012 reference equations.
+          {t.homePageSubtitle}
         </p>
       </div>
 
@@ -102,15 +102,10 @@ function HomePage({ onNavigate }: { onNavigate: (m: 'clinical' | 'research') => 
         <ModuleCard
           icon={<Activity className="w-5 h-5 text-blue-600" />}
           iconBg="bg-blue-50 border border-blue-100"
-          title="Spirometry Analysis"
-          description="Upload individual or batch spirometry PDFs for automated analysis comparing Murray vs GLI 2012 reference equations with ERS/ATS 2022 interpretation."
-          capabilities={[
-            'Single and batch PDF upload',
-            'ERS/ATS 2022 + Traditional GOLD interpretation',
-            'Bronchodilator response assessment',
-            'Side-by-side method comparison',
-          ]}
-          actionLabel="Open Spirometry Analysis"
+          title={t.clinicalTitle}
+          description={t.clinicalDesc}
+          capabilities={[t.clinicalCap1, t.clinicalCap2, t.clinicalCap3, t.clinicalCap4]}
+          actionLabel={t.clinicalButton}
           actionColor="bg-blue-600 hover:bg-blue-700"
           onClick={() => onNavigate('clinical')}
         />
@@ -119,15 +114,10 @@ function HomePage({ onNavigate }: { onNavigate: (m: 'clinical' | 'research') => 
         <ModuleCard
           icon={<BarChart3 className="w-5 h-5 text-violet-600" />}
           iconBg="bg-violet-50 border border-violet-100"
-          title="Research Module"
-          description="Batch process XLSX datasets from the hospital server, run population-level analyses, and manage the spirometry database."
-          capabilities={[
-            'XLSX batch processing',
-            'Hospital server data extraction',
-            'Population demographics & COPD rates',
-            'Database export and management',
-          ]}
-          actionLabel="Open Research Tools"
+          title={t.researchTitle}
+          description={t.researchDesc}
+          capabilities={[t.researchCap1, t.researchCap2, t.researchCap3, t.researchCap4]}
+          actionLabel={t.researchButton}
           actionColor="bg-violet-600 hover:bg-violet-700"
           onClick={() => onNavigate('research')}
         />
@@ -135,7 +125,7 @@ function HomePage({ onNavigate }: { onNavigate: (m: 'clinical' | 'research') => 
 
       {/* Footer note */}
       <p className="text-center text-xs text-slate-400 mt-10">
-        Decision-support tool only — all results require physician verification before clinical use.
+        {t.disclaimerText}
       </p>
     </div>
   );

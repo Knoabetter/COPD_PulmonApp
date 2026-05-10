@@ -5,6 +5,7 @@ import EnhancedAnalysisResults from './EnhancedAnalysisResults';
 import DiagnosisModal from './DiagnosisModal';
 import BatchUploadSection from '../shared/BatchUploadSection';
 import { authFetch } from '../../utils/authFetch';
+import { t } from '../../translations';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -134,18 +135,18 @@ const ClinicalAnalysisModule = () => {
   const handleDiagnosisConfirm = async (severity: string, _criteria: any) => {
     try {
       await saveDiagnosis(`Obstructive pattern - ${severity} severity`, severity);
-      alert('Diagnosis confirmed and saved successfully');
+      alert(t.diagnosisConfirmed);
     } catch (error) {
-      alert('Error saving diagnosis: ' + (error as Error).message);
+      alert(t.diagnosisError + ': ' + (error as Error).message);
     }
   };
 
   const handleDiagnosisDecline = async (customDiagnosis: string) => {
     try {
       await saveDiagnosis(customDiagnosis, '');
-      alert('Custom diagnosis saved successfully');
+      alert(t.customDiagnosisSaved);
     } catch (error) {
-      alert('Error saving diagnosis: ' + (error as Error).message);
+      alert(t.diagnosisError + ': ' + (error as Error).message);
     }
   };
 
@@ -330,9 +331,9 @@ const ClinicalAnalysisModule = () => {
 
   // ─── Criteria pill options ─────────────────────────────────────────────────
   const criteriaOptions = [
-    { value: 'murray',     label: 'Murray',   activeClass: 'bg-blue-600 text-white border-blue-600' },
-    { value: 'gli',        label: 'GLI 2012', activeClass: 'bg-purple-600 text-white border-purple-600' },
-    { value: 'comparison', label: 'Compare',  activeClass: 'bg-emerald-600 text-white border-emerald-600' },
+    { value: 'murray',     label: t.murray,  activeClass: 'bg-blue-600 text-white border-blue-600' },
+    { value: 'gli',        label: t.gli,     activeClass: 'bg-purple-600 text-white border-purple-600' },
+    { value: 'comparison', label: t.compare, activeClass: 'bg-emerald-600 text-white border-emerald-600' },
   ];
 
   const activeBatchResult = batchResults?.[selectedBatchIndex] ?? null;
@@ -356,7 +357,7 @@ const ClinicalAnalysisModule = () => {
                   : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:text-slate-700'
               }`}
             >
-              {mode === 'single' ? 'Single PDF' : 'Batch'}
+              {mode === 'single' ? t.singlePdf : t.batch}
             </button>
           ))}
         </div>
@@ -370,9 +371,9 @@ const ClinicalAnalysisModule = () => {
             <label htmlFor="pdf-upload" className="flex items-center gap-3 px-5 py-4 cursor-pointer">
               <FileText className={`w-5 h-5 shrink-0 ${selectedFile ? 'text-emerald-600' : 'text-slate-400'}`} />
               <span className={`text-sm ${selectedFile ? 'text-slate-900 font-semibold' : 'text-slate-500'}`}>
-                {selectedFile ? selectedFile.name : 'Click to select a spirometry PDF…'}
+                {selectedFile ? selectedFile.name : t.clickToSelectPdf}
               </span>
-              {selectedFile && <span className="ml-auto text-sm text-emerald-600 font-bold">✓ Ready</span>}
+              {selectedFile && <span className="ms-auto text-sm text-emerald-600 font-bold">{t.ready}</span>}
             </label>
           </div>
         ) : (
@@ -381,7 +382,7 @@ const ClinicalAnalysisModule = () => {
 
         {/* Criteria pills */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider mr-1">Reference:</span>
+          <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider me-1">{t.reference}</span>
           {criteriaOptions.map(opt => (
             <button
               key={opt.value}
@@ -407,8 +408,8 @@ const ClinicalAnalysisModule = () => {
             }`}
           >
             {isProcessing
-              ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Processing…</>
-              : <><Activity className="w-5 h-5 mr-2" />Analyze Spirometry</>
+              ? <><Loader2 className="w-5 h-5 me-2 animate-spin" />{t.processingBtn}</>
+              : <><Activity className="w-5 h-5 me-2" />{t.analyzeSpirometry}</>
             }
           </button>
         )}
@@ -435,7 +436,7 @@ const ClinicalAnalysisModule = () => {
           <div className="flex items-center gap-3 text-sm text-slate-500 mt-2">
             <span className="font-bold text-blue-600">{uploadProgress}%</span>
             <span>•</span>
-            <span className="font-mono">{`${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`} elapsed</span>
+            <span className="font-mono">{`${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`} {t.elapsed}</span>
           </div>
         </div>
       )}
@@ -508,7 +509,7 @@ const ClinicalAnalysisModule = () => {
             <div className="bg-slate-900 px-5 py-4 border-b border-slate-700">
               <h3 className="font-bold text-white flex items-center gap-2 text-sm">
                 <FileText className="w-4 h-4 text-slate-400" />
-                Spirometry Report
+                {t.spirometryReport}
               </h3>
             </div>
             <div className="h-full p-4">

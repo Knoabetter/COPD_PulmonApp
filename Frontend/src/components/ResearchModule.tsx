@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Upload, BarChart3, Database, Download, FileText, Users, TrendingUp,
+  Upload, BarChart3, Database, Download, FileText, TrendingUp,
   AlertCircle, CheckCircle, Settings, Loader2, Eye, Filter, Calendar, Clock,
 } from 'lucide-react';
 import { authFetch } from '../utils/authFetch';
+import { t } from '../translations';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -104,7 +105,7 @@ const ResearchModule = () => {
 
   const handleBatchAnalysis = async () => {
     if (selectedFiles.length === 0 && !extractionPeriod.startDate) {
-      setUploadStatus('Please select XLSX files or set an extraction period.');
+      setUploadStatus(t.selectXlsxOrDate);
       return;
     }
     setIsProcessing(true);
@@ -165,9 +166,9 @@ const ResearchModule = () => {
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   const tabs: { id: 'batch' | 'population' | 'database'; label: string; icon: React.ReactNode }[] = [
-    { id: 'batch',      label: 'Batch Processing',   icon: <Upload className="w-4 h-4" /> },
-    { id: 'population', label: 'Population Studies', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'database',   label: 'Database',           icon: <Database className="w-4 h-4" /> },
+    { id: 'batch',      label: t.tabBatchProcessing,   icon: <Upload className="w-4 h-4" /> },
+    { id: 'population', label: t.tabPopulationStudies, icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'database',   label: t.tabDatabase,          icon: <Database className="w-4 h-4" /> },
   ];
 
   return (
@@ -175,10 +176,8 @@ const ResearchModule = () => {
 
       {/* Page header */}
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Research Module</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Batch processing, population analysis, and database management for hospital spirometry data.
-        </p>
+        <h1 className="text-xl font-bold text-slate-900">{t.researchModuleTitle}</h1>
+        <p className="text-sm text-slate-500 mt-0.5">{t.researchModuleSubtitle}</p>
       </div>
 
       {/* Tab bar */}
@@ -220,11 +219,11 @@ const ResearchModule = () => {
           {isProcessing && (
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-bold text-slate-700">Processing hospital data…</span>
+                <span className="text-sm font-bold text-slate-700">{t.processingHospitalData}</span>
                 <div className="flex items-center gap-3 text-sm text-slate-500">
                   <span className="font-bold text-blue-600">{uploadProgress}%</span>
                   <span>•</span>
-                  <span className="font-mono">{fmt(elapsedSeconds)} elapsed</span>
+                  <span className="font-mono">{fmt(elapsedSeconds)} {t.elapsed}</span>
                 </div>
               </div>
               <div className="w-full bg-slate-200 rounded-full h-2.5">
@@ -266,7 +265,7 @@ const BatchUploadView = ({ selectedFiles, extractionPeriod, isProcessing, onFile
   <div className="space-y-5">
     {/* XLSX upload */}
     <SectionCard>
-      <SectionHeader icon={<Upload className="w-4 h-4" />} title="XLSX Batch Upload" subtitle="Upload files containing hospital server links" />
+      <SectionHeader icon={<Upload className="w-4 h-4" />} title={t.xlsxUploadTitle} subtitle={t.xlsxUploadSubtitle} />
       <div className="p-6 space-y-4">
         <div className={`border-2 border-dashed rounded-xl transition-colors ${
           selectedFiles.length > 0 ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200 hover:border-slate-300'
@@ -278,11 +277,11 @@ const BatchUploadView = ({ selectedFiles, extractionPeriod, isProcessing, onFile
               <p className={`text-sm font-semibold ${selectedFiles.length > 0 ? 'text-slate-900' : 'text-slate-600'}`}>
                 {selectedFiles.length > 0
                   ? `${selectedFiles.length} XLSX file${selectedFiles.length > 1 ? 's' : ''} selected`
-                  : 'Click to upload XLSX files with server links'}
+                  : t.clickToUploadXlsx}
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">Each file may contain up to 2000 hospital records</p>
+              <p className="text-xs text-slate-400 mt-0.5">{t.xlsxRecordsHint}</p>
             </div>
-            {selectedFiles.length > 0 && <span className="ml-auto text-sm text-blue-600 font-bold">✓ Ready</span>}
+            {selectedFiles.length > 0 && <span className="ms-auto text-sm text-blue-600 font-bold">{t.ready}</span>}
           </label>
         </div>
 
@@ -291,7 +290,7 @@ const BatchUploadView = ({ selectedFiles, extractionPeriod, isProcessing, onFile
             {selectedFiles.map((f, i) => (
               <div key={i} className="flex items-center justify-between text-sm bg-slate-50 rounded-lg px-3 py-2">
                 <span className="text-slate-700 truncate">{f.name}</span>
-                <span className="text-xs text-slate-400 ml-2 shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                <span className="text-xs text-slate-400 ms-2 shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
               </div>
             ))}
           </div>
@@ -301,11 +300,11 @@ const BatchUploadView = ({ selectedFiles, extractionPeriod, isProcessing, onFile
 
     {/* Date range extraction */}
     <SectionCard>
-      <SectionHeader icon={<Calendar className="w-4 h-4" />} title="Hospital Server Extraction" subtitle="Extract tests by time period" />
+      <SectionHeader icon={<Calendar className="w-4 h-4" />} title={t.hospitalExtractionTitle} subtitle={t.hospitalExtractionSubtitle} />
       <div className="p-6 space-y-4">
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Start Date</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{t.startDate}</label>
             <input
               type="date"
               value={extractionPeriod.startDate}
@@ -314,7 +313,7 @@ const BatchUploadView = ({ selectedFiles, extractionPeriod, isProcessing, onFile
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">End Date</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{t.endDate}</label>
             <input
               type="date"
               value={extractionPeriod.endDate}
@@ -325,9 +324,7 @@ const BatchUploadView = ({ selectedFiles, extractionPeriod, isProcessing, onFile
         </div>
         <div className="flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
           <Clock className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-slate-600">
-            Tests are fetched from the hospital server by time period. PDF download is fast; OCR data extraction takes longer depending on volume.
-          </p>
+          <p className="text-xs text-slate-600">{t.extractionHint}</p>
         </div>
       </div>
     </SectionCard>
@@ -343,8 +340,8 @@ const BatchUploadView = ({ selectedFiles, extractionPeriod, isProcessing, onFile
       }`}
     >
       {isProcessing
-        ? <><Loader2 className="w-4 h-4 animate-spin" />Processing Hospital Data…</>
-        : <><BarChart3 className="w-4 h-4" />Start Batch Processing</>}
+        ? <><Loader2 className="w-4 h-4 animate-spin" />{t.processingHospitalData}</>
+        : <><BarChart3 className="w-4 h-4" />{t.startBatchProcessing}</>}
     </button>
   </div>
 );
@@ -357,32 +354,32 @@ const BatchResultsView = ({ results, onBack }: { results: BatchResults; onBack: 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Processing Results</h2>
-        <button onClick={onBack} className="text-xs text-blue-600 hover:underline font-semibold">← New Analysis</button>
+        <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.processingResults}</h2>
+        <button onClick={onBack} className="text-xs text-blue-600 hover:underline font-semibold">{t.newAnalysis}</button>
       </div>
 
       {/* Stats */}
       <SectionCard>
-        <SectionHeader icon={<BarChart3 className="w-4 h-4" />} title="Extraction Summary" subtitle={new Date(results.timestamp).toLocaleString()} />
+        <SectionHeader icon={<BarChart3 className="w-4 h-4" />} title={t.extractionSummary} subtitle={new Date(results.timestamp).toLocaleString()} />
         <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Stat value={results.total_files_processed} label="Files Processed" color="text-blue-600" />
-          <Stat value={results.total_records_found.toLocaleString()} label="Records Found" color="text-violet-600" />
-          <Stat value={succeeded} label="Successful" color="text-emerald-600" />
-          <Stat value={failed} label="Failed" color="text-red-600" />
+          <Stat value={results.total_files_processed} label={t.filesProcessed} color="text-blue-600" />
+          <Stat value={results.total_records_found.toLocaleString()} label={t.recordsFound} color="text-violet-600" />
+          <Stat value={succeeded} label={t.successful} color="text-emerald-600" />
+          <Stat value={failed} label={t.failed} color="text-red-600" />
         </div>
       </SectionCard>
 
       {/* Per-file table */}
       <SectionCard>
-        <SectionHeader icon={<FileText className="w-4 h-4" />} title="File Results" />
+        <SectionHeader icon={<FileText className="w-4 h-4" />} title={t.fileResults} />
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                <th className="px-5 py-3 text-left">File</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-right">Records</th>
-                <th className="px-4 py-3 text-right">Server Links</th>
+                <th className="px-5 py-3 text-start">{t.colFile}</th>
+                <th className="px-4 py-3 text-start">{t.colStatus}</th>
+                <th className="px-4 py-3 text-end">{t.colRecords}</th>
+                <th className="px-4 py-3 text-end">{t.colServerLinks}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -396,13 +393,13 @@ const BatchResultsView = ({ results, onBack }: { results: BatchResults; onBack: 
                   </td>
                   <td className="px-4 py-3">
                     {r.status === 'processed'
-                      ? <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">OK</span>
-                      : <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">Failed</span>}
+                      ? <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">{t.statusOk}</span>
+                      : <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">{t.statusFailed}</span>}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold text-slate-700">
+                  <td className="px-4 py-3 text-end font-mono font-semibold text-slate-700">
                     {r.status === 'processed' ? r.records_found.toLocaleString() : '—'}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-slate-500">
+                  <td className="px-4 py-3 text-end font-mono text-slate-500">
                     {r.status === 'processed' ? r.server_links_found : '—'}
                   </td>
                 </tr>
@@ -415,10 +412,10 @@ const BatchResultsView = ({ results, onBack }: { results: BatchResults; onBack: 
       {/* Export actions */}
       <div className="flex flex-wrap gap-3">
         <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
-          <Download className="w-4 h-4" /> Download Report
+          <Download className="w-4 h-4" /> {t.downloadReport}
         </button>
         <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors">
-          <FileText className="w-4 h-4" /> Export to Excel
+          <FileText className="w-4 h-4" /> {t.exportToExcel}
         </button>
       </div>
     </div>
@@ -428,22 +425,22 @@ const BatchResultsView = ({ results, onBack }: { results: BatchResults; onBack: 
 // ── Population Studies ────────────────────────────────────────────
 const PopulationStudiesView = () => {
   const studies = [
-    { title: 'Age-Stratified Analysis',  desc: 'Compare diagnostic method performance across age groups to identify age-related biases.' },
-    { title: 'Sex-Based Comparison',     desc: 'Analyze differences in diagnostic accuracy between male and female populations.' },
-    { title: 'Severity Distribution',    desc: 'Examine COPD severity classifications using different reference equations.' },
-    { title: 'Longitudinal Tracking',    desc: 'Track patient spirometry changes over time using consistent reference standards.' },
+    { title: t.studyAge,          desc: t.studyAgeDesc },
+    { title: t.studySex,          desc: t.studySexDesc },
+    { title: t.studySeverity,     desc: t.studySeverityDesc },
+    { title: t.studyLongitudinal, desc: t.studyLongitudinalDesc },
   ];
 
   return (
     <SectionCard>
-      <SectionHeader icon={<TrendingUp className="w-4 h-4" />} title="Population Studies" subtitle="Analysis tools for population-level research" />
+      <SectionHeader icon={<TrendingUp className="w-4 h-4" />} title={t.popStudiesTitle} subtitle={t.popStudiesSubtitle} />
       <div className="p-6 grid sm:grid-cols-2 gap-4">
         {studies.map(s => (
           <div key={s.title} className="border border-slate-200 rounded-xl p-5">
             <div className="flex items-start justify-between gap-3 mb-1.5">
               <h3 className="text-sm font-bold text-slate-800">{s.title}</h3>
               <span className="shrink-0 px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-400 rounded-md cursor-not-allowed">
-                Coming soon
+                {t.comingSoon}
               </span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">{s.desc}</p>
@@ -481,7 +478,7 @@ const DatabaseView = ({ dbStatus, dbLoading, onImportSuccess }: { dbStatus: DbSt
         setImportStatus({ type: 'error', message: data.error });
       }
     } catch {
-      setImportStatus({ type: 'error', message: 'Import request failed' });
+      setImportStatus({ type: 'error', message: t.importRequestFailed });
     } finally {
       setImporting(false);
       if (importInputRef.current) importInputRef.current.value = '';
@@ -493,7 +490,7 @@ const DatabaseView = ({ dbStatus, dbLoading, onImportSuccess }: { dbStatus: DbSt
   return (
     <div className="space-y-5">
       <SectionCard>
-        <SectionHeader icon={<Database className="w-4 h-4" />} title="Database Status" />
+        <SectionHeader icon={<Database className="w-4 h-4" />} title={t.databaseStatus} />
         <div className="p-6 space-y-5">
           {/* File info row */}
           <div className="flex items-center justify-between">
@@ -504,33 +501,21 @@ const DatabaseView = ({ dbStatus, dbLoading, onImportSuccess }: { dbStatus: DbSt
               <p className="text-xs text-slate-400">
                 {dbLoading ? skelly : dbStatus
                   ? `${dbStatus.database_info.file_size_mb.toFixed(1)} MB · Last updated ${new Date(dbStatus.database_info.last_modified).toLocaleDateString()}`
-                  : 'Backend/Scripts/ directory'
+                  : t.backendDirectory
                 }
               </p>
             </div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">
-              <CheckCircle className="w-3.5 h-3.5" /> Active
+              <CheckCircle className="w-3.5 h-3.5" /> {t.activeStatus}
             </span>
           </div>
 
           {/* Stats grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
-            <Stat
-              value={dbLoading ? '—' : (dbStatus?.statistics.total_records.toLocaleString() ?? '—')}
-              label="Total Records" color="text-blue-700"
-            />
-            <Stat
-              value={dbLoading ? '—' : (dbStatus?.statistics.validated_records.toLocaleString() ?? '—')}
-              label="Validated" color="text-emerald-700"
-            />
-            <Stat
-              value={dbLoading ? '—' : dbStatus ? `${dbStatus.statistics.validation_rate.toFixed(1)}%` : '—'}
-              label="Validation Rate" color="text-violet-700"
-            />
-            <Stat
-              value={dbLoading ? '—' : (dbStatus?.statistics.total_columns ?? '—')}
-              label="Columns" color="text-slate-700"
-            />
+            <Stat value={dbLoading ? '—' : (dbStatus?.statistics.total_records.toLocaleString() ?? '—')} label={t.totalRecords} color="text-blue-700" />
+            <Stat value={dbLoading ? '—' : (dbStatus?.statistics.validated_records.toLocaleString() ?? '—')} label={t.validated} color="text-emerald-700" />
+            <Stat value={dbLoading ? '—' : dbStatus ? `${dbStatus.statistics.validation_rate.toFixed(1)}%` : '—'} label={t.validationRate} color="text-violet-700" />
+            <Stat value={dbLoading ? '—' : (dbStatus?.statistics.total_columns ?? '—')} label={t.columns} color="text-slate-700" />
           </div>
         </div>
       </SectionCard>
@@ -546,45 +531,29 @@ const DatabaseView = ({ dbStatus, dbLoading, onImportSuccess }: { dbStatus: DbSt
       {/* Actions */}
       <input ref={importInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleImport} />
       <div className="grid sm:grid-cols-2 gap-3">
-        <button
-          onClick={() => handleExport('excel')}
-          className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
+        <button onClick={() => handleExport('excel')} className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
           <span className="text-slate-400"><Download className="w-4 h-4" /></span>
-          Export to Excel
+          {t.exportToExcel}
         </button>
-        <button
-          onClick={() => handleExport('csv')}
-          className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
+        <button onClick={() => handleExport('csv')} className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
           <span className="text-slate-400"><Download className="w-4 h-4" /></span>
-          Export to CSV
+          {t.exportToCsv}
         </button>
-        <button
-          onClick={() => importInputRef.current?.click()}
-          disabled={importing}
-          className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
-        >
+        <button onClick={() => importInputRef.current?.click()} disabled={importing} className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">
           <span className="text-slate-400">{importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}</span>
-          {importing ? 'Importing…' : 'Import Database'}
+          {importing ? t.importing : t.importDatabase}
         </button>
-        <button
-          className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
+        <button className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
           <span className="text-slate-400"><Eye className="w-4 h-4" /></span>
-          View Records
+          {t.viewRecords}
         </button>
-        <button
-          className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
+        <button className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
           <span className="text-slate-400"><Filter className="w-4 h-4" /></span>
-          Filter Records
+          {t.filterRecords}
         </button>
-        <button
-          className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
+        <button className="flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
           <span className="text-slate-400"><Settings className="w-4 h-4" /></span>
-          Validation Settings
+          {t.validationSettings}
         </button>
       </div>
 
@@ -592,8 +561,8 @@ const DatabaseView = ({ dbStatus, dbLoading, onImportSuccess }: { dbStatus: DbSt
       <div className="flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5">
         <AlertCircle className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
         <div>
-          <p className="text-xs font-semibold text-slate-700 mb-0.5">Processing Pipeline</p>
-          <p className="text-xs text-slate-500">PDF Extraction → OCR Processing → Data Validation → Excel Database (save_data.py)</p>
+          <p className="text-xs font-semibold text-slate-700 mb-0.5">{t.processingPipelineTitle}</p>
+          <p className="text-xs text-slate-500">{t.processingPipelineDesc}</p>
         </div>
       </div>
     </div>

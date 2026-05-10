@@ -81,6 +81,7 @@ export const t = {
   endDate:        'End Date',
   extractionHint: 'Tests are fetched from the hospital server by time period. PDF download is fast; OCR data extraction takes longer depending on volume.',
 
+  selectXlsxOrDate:       'Please select XLSX files or set a date range.',
   startBatchProcessing:   'Start Batch Processing',
   processingHospitalData: 'Processing Hospital Data…',
   processingResults:      'Processing Results',

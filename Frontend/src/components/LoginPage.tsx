@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loader2, Activity } from 'lucide-react';
+import { t } from '../translations';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -23,10 +24,10 @@ const LoginPage = ({ onLogin }: { onLogin: (token: string) => void }) => {
       if (data.success && data.token) {
         onLogin(data.token);
       } else {
-        setError(data.error ?? 'Login failed');
+        setError(data.error ?? t.loginFailed);
       }
     } catch {
-      setError('Unable to reach server');
+      setError(t.serverUnreachable);
     } finally {
       setLoading(false);
     }
@@ -40,16 +41,16 @@ const LoginPage = ({ onLogin }: { onLogin: (token: string) => void }) => {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 mb-4">
             <Activity className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">PulmonApp</h1>
-          <p className="text-sm text-slate-500 mt-1">Tel Aviv Sourasky Medical Center</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t.appTitle}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t.institutionName}</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-          <h2 className="text-base font-semibold text-slate-800 mb-6">Sign in</h2>
+          <h2 className="text-base font-semibold text-slate-800 mb-6">{t.signIn}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">Username</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">{t.username}</label>
               <input
                 type="text"
                 value={username}
@@ -60,7 +61,7 @@ const LoginPage = ({ onLogin }: { onLogin: (token: string) => void }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">Password</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">{t.password}</label>
               <input
                 type="password"
                 value={password}
@@ -82,7 +83,7 @@ const LoginPage = ({ onLogin }: { onLogin: (token: string) => void }) => {
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
             >
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : 'Sign in'}
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> {t.signingIn}</> : t.signIn}
             </button>
           </form>
         </div>

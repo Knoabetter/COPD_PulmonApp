@@ -56,7 +56,7 @@ OLD_FULL_BASE_REGEX_FIELDS = {
 OLD_FULL_SPECIFIC_REGEX_FIELDS = {
     "Format": FORMATS.OLD.FULL.value,
     "Date": r"Date (\b\d{6}\b) (\b\d{6}\b)",
-    "FVC": r"[\nFVCe]{4}\s+[\[\(\{c]{1,2}[ILu][\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)[\s+t%&36s]{2}",
+    "FVC": r"[\nFVCvce]{4}\s+[\[\(\{c]{1,2}[ILu][\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)[\s+t%&36s]{2}",
     "FEV1": r"[\nFEVc]{4}\s+1\s+[\[\(\{c]{1,2}[ILu]{1,2}[\]\)\}J]+\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)[\s+%]{2}",
     "FEV6": r"[\nFEV6c]{5}\s+[\[\(\{c]{1,2}L[\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s]{2}",
     "FEV1 % FEV6": r"[\nFEV1c]{5}[\s+t%&36s]{1,3}[FEV6c]{4}\s+[\[\(\{c]{1,2}[%&]+[\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s]{2}",
@@ -71,7 +71,7 @@ OLD_FULL_SPECIFIC_REGEX_FIELDS = {
 OLD_ONLY_SPIROMETRY_SPECIFIC_REGEX_FIELDS = {
     "Format": FORMATS.OLD.ONLY_SPIROMETRY_WITH_POST.value,
     "Date": r"Date (\b\d{6}\b) (\b\d{6}\b)",
-    "FVC": r"[\nFVCe]{4}\s+[\[\(\{c]{1,2}[ILu]{1,2}[\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)[\s+t%&36s]{2}",
+    "FVC": r"[\nFVCvce]{4}\s+[\[\(\{c]{1,2}[ILu]{1,2}[\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)[\s+t%&36s]{2}",
     "FEV1": r"[\nFEVc]{4}\s+1\s+[\[\(\{c]{1,2}[ILu]{1,2}[\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s§|]{1,4}([\d.,Olst~-]+)[\s+%]{2}",
     "FEV6": r"[\nFEV6c]{5}\s+[\[\(\{c]{1,2}L[\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s]{2}",
     "FEV1 % FEV6": r"[\nFEV1c]{5}[\s+t%&36s]{1,3}[FEV6c]{4}\s+[\[\(\{c]{1,2}[%&ts]+[\]\)\}J]{1,2}\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)\s+([\d.,Olst~-]+)[\s+t%&36s]{2}",

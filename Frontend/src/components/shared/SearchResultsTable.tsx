@@ -1,4 +1,5 @@
 import { FileText } from 'lucide-react';
+import { t } from '../../translations';
 
 interface SearchRow {
   id: string | number;
@@ -35,8 +36,8 @@ const SearchResultsTable = ({ searchResults }: { searchResults: SearchRow[] }) =
       <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2.5">
         <FileText className="w-4 h-4 text-slate-400" />
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
-          Search Results
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs font-bold">{searchResults.length}</span>
+          {t.searchResults}
+          <span className="ms-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs font-bold">{searchResults.length}</span>
         </h3>
       </div>
 
@@ -44,12 +45,12 @@ const SearchResultsTable = ({ searchResults }: { searchResults: SearchRow[] }) =
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-              <th className="px-5 py-3 text-left">Patient ID</th>
-              <th className="px-4 py-3 text-left">Date</th>
-              <th className="px-4 py-3 text-right">FEV1</th>
-              <th className="px-4 py-3 text-right">FVC</th>
-              <th className="px-4 py-3 text-right">FEV1/FVC</th>
-              <th className="px-4 py-3 text-left">Diagnosis</th>
+              <th className="px-5 py-3 text-start">{t.colPatientId}</th>
+              <th className="px-4 py-3 text-start">{t.colDate}</th>
+              <th className="px-4 py-3 text-end">{t.colFev1}</th>
+              <th className="px-4 py-3 text-end">{t.colFvc}</th>
+              <th className="px-4 py-3 text-end">{t.colRatio}</th>
+              <th className="px-4 py-3 text-start">{t.colDiagnosis}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -57,9 +58,9 @@ const SearchResultsTable = ({ searchResults }: { searchResults: SearchRow[] }) =
               <tr key={i} className="hover:bg-slate-50/60">
                 <td className="px-5 py-3 font-semibold text-slate-900">{test.id}</td>
                 <td className="px-4 py-3 text-slate-500">{test.date_pre || '—'}</td>
-                <td className="px-4 py-3 text-right font-mono text-slate-700">{test.fev1_pre?.toFixed(2) ?? '—'}</td>
-                <td className="px-4 py-3 text-right font-mono text-slate-700">{test.fvc_pre?.toFixed(2) ?? '—'}</td>
-                <td className="px-4 py-3 text-right font-mono text-slate-700">{test.fev1_fvc_pre?.toFixed(3) ?? '—'}</td>
+                <td className="px-4 py-3 text-end font-mono text-slate-700">{test.fev1_pre?.toFixed(2) ?? '—'}</td>
+                <td className="px-4 py-3 text-end font-mono text-slate-700">{test.fvc_pre?.toFixed(2) ?? '—'}</td>
+                <td className="px-4 py-3 text-end font-mono text-slate-700">{test.fev1_fvc_pre?.toFixed(3) ?? '—'}</td>
                 <td className="px-4 py-3">{diagnosisBadge(test.diagnosis)}</td>
               </tr>
             ))}

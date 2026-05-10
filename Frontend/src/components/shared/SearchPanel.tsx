@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Calendar, User, Loader2 } from 'lucide-react';
 import { authFetch } from '../../utils/authFetch';
+import { t } from '../../translations';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -20,9 +21,9 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
       const response = await authFetch(`${API_BASE}/search/patient/${patientId}`);
       const data = await response.json();
       if (data.success) onSearchResults(data.tests, 'patient');
-      else setError(data.error || 'No records found for this patient ID.');
+      else setError(data.error || t.noRecordsPatient);
     } catch {
-      setError('Unable to connect to server.');
+      setError(t.networkError);
     } finally {
       setIsSearching(false);
     }
@@ -40,9 +41,9 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
       });
       const data = await response.json();
       if (data.success) onSearchResults(data.tests, 'date');
-      else setError(data.error || 'No records found in this date range.');
+      else setError(data.error || t.noRecordsDate);
     } catch {
-      setError('Unable to connect to server.');
+      setError(t.networkError);
     } finally {
       setIsSearching(false);
     }
@@ -53,7 +54,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
       {/* Header */}
       <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2.5">
         <Search className="w-4 h-4 text-slate-400" />
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Search Patient Records</h3>
+        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.searchPatientRecords}</h3>
       </div>
 
       <div className="p-5 space-y-4">
@@ -70,7 +71,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
               }`}
             >
               {type === 'patient' ? <User className="w-3.5 h-3.5" /> : <Calendar className="w-3.5 h-3.5" />}
-              {type === 'patient' ? 'Patient ID' : 'Date Range'}
+              {type === 'patient' ? t.patientId : t.dateRange}
             </button>
           ))}
         </div>
@@ -83,7 +84,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
               value={patientId}
               onChange={e => { setPatientId(e.target.value); setError(''); }}
               onKeyDown={e => e.key === 'Enter' && handlePatientSearch()}
-              placeholder="Enter Patient ID (numerical)"
+              placeholder={t.enterPatientId}
               className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400 placeholder-slate-400"
             />
             <button
@@ -92,7 +93,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
               className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
             >
               {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              {isSearching ? 'Searching…' : 'Search'}
+              {isSearching ? t.searching : t.search}
             </button>
           </div>
         ) : (
@@ -103,7 +104,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
               onChange={e => { setStartDate(e.target.value); setError(''); }}
               className="px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
             />
-            <span className="text-slate-400 text-sm">to</span>
+            <span className="text-slate-400 text-sm">{t.dateTo}</span>
             <input
               type="date"
               value={endDate}
@@ -116,7 +117,7 @@ const SearchPanel = ({ onSearchResults }: { onSearchResults: (results: any[], ty
               className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
             >
               {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              {isSearching ? 'Searching…' : 'Search'}
+              {isSearching ? t.searching : t.search}
             </button>
           </div>
         )}

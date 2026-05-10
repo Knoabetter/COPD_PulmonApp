@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, FileText, Loader2, BarChart3, Trash2, CheckCircle2 } from 'lucide-react';
+import { t } from '../../translations';
 
 const MAX_FILES = 5;
 
@@ -30,9 +31,9 @@ const BatchUploadSection = ({ onBatchAnalysis, isProcessing }: { onBatchAnalysis
 
   const handleFiles = (files: FileList | File[]) => {
     const pdfFiles = Array.from(files).filter((f: File) => f.type === 'application/pdf');
-    if (pdfFiles.length === 0) { alert('Please select only PDF files.'); return; }
+    if (pdfFiles.length === 0) { alert(t.pdfOnly); return; }
     if (selectedFiles.length + pdfFiles.length > MAX_FILES) {
-      alert(`Maximum ${MAX_FILES} files allowed. You have ${selectedFiles.length} selected.`);
+      alert(t.maxFilesError(MAX_FILES, selectedFiles.length + pdfFiles.length));
       return;
     }
     const newFiles = pdfFiles.filter(nf => !selectedFiles.some(ef => ef.name === nf.name && ef.size === nf.size));
@@ -90,10 +91,10 @@ const BatchUploadSection = ({ onBatchAnalysis, isProcessing }: { onBatchAnalysis
           <Plus className={`w-4 h-4 shrink-0 ${dragActive ? 'text-blue-500' : 'text-slate-400'}`} />
           <span className="text-sm text-slate-500">
             {selectedFiles.length === 0
-              ? `Drag & drop or click to add PDFs (max ${MAX_FILES})`
+              ? t.dragDropOrClick(MAX_FILES)
               : selectedFiles.length >= MAX_FILES
-              ? `${MAX_FILES}/${MAX_FILES} files — limit reached`
-              : `${selectedFiles.length}/${MAX_FILES} — add more`}
+              ? t.limitReached(MAX_FILES)
+              : t.filesProgress(selectedFiles.length, MAX_FILES)}
           </span>
         </label>
       </div>
@@ -120,7 +121,7 @@ const BatchUploadSection = ({ onBatchAnalysis, isProcessing }: { onBatchAnalysis
                     </button>
                   )}
                   {showProgress && !done && (
-                    <span className="text-xs font-medium text-blue-600 w-8 text-right shrink-0">{Math.round(progress)}%</span>
+                    <span className="text-xs font-medium text-blue-600 w-8 text-end shrink-0">{Math.round(progress)}%</span>
                   )}
                 </div>
                 {showProgress && (
@@ -139,7 +140,7 @@ const BatchUploadSection = ({ onBatchAnalysis, isProcessing }: { onBatchAnalysis
 
       {/* Analyze button */}
       <button
-        onClick={() => { if (selectedFiles.length === 0) { alert('Please select at least one PDF.'); return; } onBatchAnalysis(selectedFiles); }}
+        onClick={() => { if (selectedFiles.length === 0) { alert(t.selectAtLeastOne); return; } onBatchAnalysis(selectedFiles); }}
         disabled={selectedFiles.length === 0 || isProcessing}
         className={`w-full py-2.5 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${
           selectedFiles.length === 0 || isProcessing
@@ -148,8 +149,8 @@ const BatchUploadSection = ({ onBatchAnalysis, isProcessing }: { onBatchAnalysis
         }`}
       >
         {isProcessing
-          ? <><Loader2 className="w-4 h-4 animate-spin" />Processing {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''}…</>
-          : <><BarChart3 className="w-4 h-4" />Analyze {selectedFiles.length || ''} File{selectedFiles.length !== 1 ? 's' : ''}</>}
+          ? <><Loader2 className="w-4 h-4 animate-spin" />{t.processingFiles(selectedFiles.length)}</>
+          : <><BarChart3 className="w-4 h-4" />{t.analyzeFiles(selectedFiles.length)}</>}
       </button>
     </div>
   );

@@ -1,4 +1,5 @@
 import { BarChart3, FileText, Download } from 'lucide-react';
+import { t } from '../../translations';
 
 interface BatchResult {
   filename: string;
@@ -13,8 +14,8 @@ interface BatchResult {
 
 const statusBadge = (success: boolean | undefined) =>
   success
-    ? <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">OK</span>
-    : <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">Failed</span>;
+    ? <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">{t.statusOk}</span>
+    : <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">{t.statusFailed}</span>;
 
 const diagnosisBadge = (diagnosis?: string) => {
   if (!diagnosis) return <span className="text-slate-400">—</span>;
@@ -77,16 +78,16 @@ const BatchResultsTable = ({ batchResults, onViewResult }: {
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center gap-2.5">
           <BarChart3 className="w-4 h-4 text-slate-400" />
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Batch Summary</h3>
-          <span className="ml-auto text-xs text-slate-400">{batchResults.length} file{batchResults.length !== 1 ? 's' : ''}</span>
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{t.batchSummary}</h3>
+          <span className="ms-auto text-xs text-slate-400">{batchResults.length} {batchResults.length !== 1 ? t.colFile + 's' : t.colFile}</span>
         </div>
         <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-5 gap-4">
           {[
-            { val: batchResults.length, label: 'Total',      color: 'text-blue-700' },
-            { val: successful.length,   label: 'Successful', color: 'text-emerald-700' },
-            { val: failed.length,       label: 'Failed',     color: 'text-red-700' },
-            { val: copdCases.length,    label: 'COPD',       color: 'text-orange-700' },
-            { val: borderline.length,   label: 'Borderline', color: 'text-amber-700' },
+            { val: batchResults.length, label: t.total,      color: 'text-blue-700' },
+            { val: successful.length,   label: t.successful, color: 'text-emerald-700' },
+            { val: failed.length,       label: t.failed,     color: 'text-red-700' },
+            { val: copdCases.length,    label: t.copd,       color: 'text-orange-700' },
+            { val: borderline.length,   label: t.borderline, color: 'text-amber-700' },
           ].map(s => (
             <div key={s.label} className="text-center">
               <div className={`text-xl font-bold ${s.color}`}>{s.val}</div>
@@ -102,13 +103,13 @@ const BatchResultsTable = ({ batchResults, onViewResult }: {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                <th className="px-5 py-3 text-left">File</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Patient</th>
-                <th className="px-4 py-3 text-right">FEV1/FVC</th>
-                <th className="px-4 py-3 text-left">Diagnosis</th>
-                <th className="px-4 py-3 text-left">Severity</th>
-                {onViewResult && <th className="px-4 py-3 text-left">Action</th>}
+                <th className="px-5 py-3 text-start">{t.colFile}</th>
+                <th className="px-4 py-3 text-start">{t.colStatus}</th>
+                <th className="px-4 py-3 text-start">{t.colPatient}</th>
+                <th className="px-4 py-3 text-end">{t.colFev1Fvc}</th>
+                <th className="px-4 py-3 text-start">{t.colDiagnosis}</th>
+                <th className="px-4 py-3 text-start">{t.colSeverity}</th>
+                {onViewResult && <th className="px-4 py-3 text-start">{t.colAction}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -123,22 +124,22 @@ const BatchResultsTable = ({ batchResults, onViewResult }: {
                         <span className="font-medium text-slate-800 truncate max-w-[180px]" title={r.filename}>{r.filename}</span>
                       </div>
                       {!r.success && r.error && (
-                        <p className="text-xs text-red-600 mt-0.5 pl-6 truncate" title={r.error}>{r.error}</p>
+                        <p className="text-xs text-red-600 mt-0.5 ps-6 truncate" title={r.error}>{r.error}</p>
                       )}
                     </td>
                     <td className="px-4 py-3">{statusBadge(r.success)}</td>
                     <td className="px-4 py-3">
                       {r.success && r.patient_info
-                        ? <div className="text-slate-700"><span className="font-semibold">{r.patient_info.age}y</span> {r.patient_info.sex}<span className="text-slate-400 text-xs ml-1">{r.patient_info.height}cm</span></div>
+                        ? <div className="text-slate-700"><span className="font-semibold">{r.patient_info.age}y</span> {r.patient_info.sex}<span className="text-slate-400 text-xs ms-1">{r.patient_info.height}cm</span></div>
                         : <span className="text-slate-400">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-700">{ratio != null ? ratio.toFixed(3) : '—'}</td>
+                    <td className="px-4 py-3 text-end font-mono font-semibold text-slate-700">{ratio != null ? ratio.toFixed(3) : '—'}</td>
                     <td className="px-4 py-3">{diagnosisBadge(diag)}</td>
                     <td className="px-4 py-3">{severityBadge(r.severity)}</td>
                     {onViewResult && (
                       <td className="px-4 py-3">
                         {r.success
-                          ? <button onClick={() => onViewResult(r)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">View →</button>
+                          ? <button onClick={() => onViewResult(r)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">{t.viewResult}</button>
                           : null}
                       </td>
                     )}
@@ -152,7 +153,7 @@ const BatchResultsTable = ({ batchResults, onViewResult }: {
         {/* Footer */}
         <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
           <span className="text-xs text-slate-400">
-            Generated {new Date().toLocaleString()}
+            {t.generated} {new Date().toLocaleString()}
           </span>
           <div className="flex gap-2">
             <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-100 transition-colors">
