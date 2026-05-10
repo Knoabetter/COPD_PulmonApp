@@ -289,11 +289,16 @@ class ClinicalInterpreter:
             # Convert ratio if given as percentage
             if ratio_measured > 1:
                 ratio_measured = ratio_measured / 100
-            
+
+            # Fallback: compute ratio from components when OCR misses the [%] unit bracket
+            if ratio_measured == 0 and fev1_measured > 0 and fvc_measured > 0:
+                ratio_measured = fev1_measured / fvc_measured
+                print(f"🔧 Computed FEV1/FVC ratio from components: {ratio_measured:.3f}")
+
             if not all([fev1_measured, fvc_measured, ratio_measured]):
                 interpretation['clinical_notes'].append("Insufficient measured values for interpretation")
                 return interpretation
-            
+
             # ERS 2022 Figure 8 Algorithm - Spirometry Interpretation
             print(f"🔍 ERS 2022 Algorithm:")
             print(f"   Ratio: {ratio_measured:.3f} vs LLN: {ratio_lln:.3f}")
@@ -402,6 +407,11 @@ class ClinicalInterpreter:
             # Convert ratio if given as percentage
             if ratio_measured > 1:
                 ratio_measured = ratio_measured / 100
+
+            # Fallback: compute ratio from components when OCR misses the [%] unit bracket
+            if ratio_measured == 0 and fev1_measured > 0 and fvc_measured > 0:
+                ratio_measured = fev1_measured / fvc_measured
+                print(f"🔧 Computed FEV1/FVC ratio from components: {ratio_measured:.3f}")
 
             if not all([fev1_measured, fvc_measured, ratio_measured]):
                 interpretation['clinical_notes'].append("Insufficient measured values for interpretation")
