@@ -154,6 +154,10 @@ def extract_text(text):
         lines = [l for l in text.splitlines() if any(k in l.lower() for k in ['height', 'ht', ' cm', 'weight', 'wt'])]
         print(f"[HEIGHT DEBUG] Height not matched. Relevant lines:\n" + "\n".join(lines[:10]))
 
+    if data.get("FVC") is None or data.get("FEV1") is None:
+        lines = [l for l in text.splitlines() if any(k in l.upper() for k in ['FVC', 'FEV'])]
+        print(f"[FVC/FEV1 DEBUG] FVC={data.get('FVC')} FEV1={data.get('FEV1')}. Relevant OCR lines:\n" + "\n".join(lines[:20]))
+
     data["Validator"] = ""
     data["Missing"] = ""
     return data, sum(1 for value in data.values() if value is not None), len(data.keys())
