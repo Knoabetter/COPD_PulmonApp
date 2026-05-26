@@ -2,7 +2,6 @@ import os
 import re
 import cv2
 import logging
-import psutil
 import pandas as pd
 from typing import List
 from pdf2image import convert_from_path
@@ -13,19 +12,6 @@ from consts import *
 from save_data import append_data
 from verification import verify_data_results
 
-def log_memory(label):
-    mb = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
-    print(f"[MEM] {label}: {mb:.0f} MB")
-
-# Module-level singleton — loaded once on startup, reused for every request
-_easyocr_reader = None
-
-def get_easyocr_reader():
-    global _easyocr_reader
-    if _easyocr_reader is None:
-        model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
-        _easyocr_reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
-    return _easyocr_reader
 
 def group_easyocr_results_by_row(ocr_results, y_threshold=15):
     detections = []
@@ -61,12 +47,15 @@ def group_easyocr_results_by_row(ocr_results, y_threshold=15):
     return organized_rows
 
 def easyocr_get_recognized_text(image_path, threshold=170):
+    import gc
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
-    reader = get_easyocr_reader()
+    model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
+    reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
     results = reader.readtext(binary)
-    text = group_easyocr_results_by_row(results)
-    text += "\n"
+    text = group_easyocr_results_by_row(results) + "\n"
+    del reader
+    gc.collect()
     return text
 
 def extract_file_paths_from_excel(excel_path: str = DATABASE_FILE_NAME, sheet_name: str = 0) -> List[str]:
@@ -259,23 +248,18 @@ def separate_new_from_old_format(images_path):
 
 def process_file(pdf_path):
     debugging_data = ""
-    log_memory("start")
     img_path = convert_pdf_to_jpegs(pdf_path)
-    log_memory("after convert_pdf_to_jpegs")
     get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
-    log_memory("after format detection")
     data, value, text, _ = analyze_images(
         img_path, get_text_func,
         base_threshold_level=base_thresh,
         num_of_thresholds=num_of_thresh
     )
-    log_memory("after analyze_images")
     debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
     debugging_data += (text + "\n\n")
     t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
     append_data(t)
     delete_images(img_path)
-    log_memory("after cleanup")
     return t, debugging_data
 
 def get_data_from_folder(folder_path):
