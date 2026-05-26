@@ -19,6 +19,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 
 ENV PYTHONUNBUFFERED=1
 
+# Tell EasyOCR where to store/find its models — same path at build and runtime
+ENV EASYOCR_MODULE_PATH=/app/easyocr_models
+
 WORKDIR /app
 COPY . .
 
@@ -29,9 +32,9 @@ RUN cd Frontend && npm install && npm run build
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r Backend/Scripts/ExtractorFiles/requirements.txt
 
-# Pre-download EasyOCR model weights at build time so they are baked into
-# the image — prevents the runtime OOM caused by downloading ~200MB on first request
-RUN python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
+# Pre-download EasyOCR model weights into the fixed path baked into the image
+RUN mkdir -p /app/easyocr_models && \
+    python -c "import easyocr; easyocr.Reader(['en'], gpu=False, model_storage_directory='/app/easyocr_models')"
 
 EXPOSE 10000
 
