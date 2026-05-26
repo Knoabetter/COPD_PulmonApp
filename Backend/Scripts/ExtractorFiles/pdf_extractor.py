@@ -2,6 +2,7 @@ import os
 import re
 import cv2
 import logging
+import psutil
 import pandas as pd
 from typing import List
 from pdf2image import convert_from_path
@@ -11,6 +12,10 @@ import easyocr
 from consts import *
 from save_data import append_data
 from verification import verify_data_results
+
+def log_memory(label):
+    mb = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
+    print(f"[MEM] {label}: {mb:.0f} MB")
 
 # Module-level singleton — loaded once on startup, reused for every request
 _easyocr_reader = None
@@ -82,7 +87,7 @@ def extract_file_paths_from_excel(excel_path: str = DATABASE_FILE_NAME, sheet_na
 def convert_pdf_to_jpegs(file_path: str) -> [str]:
     import pathlib
     try:
-        pages = convert_from_path(file_path, poppler_path=os.environ.get('POPPLER_PATH', None))
+        pages = convert_from_path(file_path, poppler_path=os.environ.get('POPPLER_PATH', None), dpi=150)
     except Exception as e:
         msg = str(e)
         print(f"[pdf2image ERROR] {type(e).__name__}: {msg}")
@@ -254,18 +259,23 @@ def separate_new_from_old_format(images_path):
 
 def process_file(pdf_path):
     debugging_data = ""
+    log_memory("start")
     img_path = convert_pdf_to_jpegs(pdf_path)
+    log_memory("after convert_pdf_to_jpegs")
     get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
+    log_memory("after format detection")
     data, value, text, _ = analyze_images(
         img_path, get_text_func,
         base_threshold_level=base_thresh,
         num_of_thresholds=num_of_thresh
     )
+    log_memory("after analyze_images")
     debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
     debugging_data += (text + "\n\n")
     t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
     append_data(t)
     delete_images(img_path)
+    log_memory("after cleanup")
     return t, debugging_data
 
 def get_data_from_folder(folder_path):
