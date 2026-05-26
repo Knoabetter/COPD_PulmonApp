@@ -7,9 +7,61 @@ from typing import List
 from pdf2image import convert_from_path
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = os.environ.get('TESSERACT_PATH', 'tesseract')
+import easyocr
 from consts import *
 from save_data import append_data
 from verification import verify_data_results
+
+# Module-level singleton — loaded once on startup, reused for every request
+_easyocr_reader = None
+
+def get_easyocr_reader():
+    global _easyocr_reader
+    if _easyocr_reader is None:
+        _easyocr_reader = easyocr.Reader(['en'], gpu=False)
+    return _easyocr_reader
+
+def group_easyocr_results_by_row(ocr_results, y_threshold=15):
+    detections = []
+    for detection in ocr_results:
+        bbox, text, conf = detection
+        avg_y = sum(point[1] for point in bbox) / len(bbox)
+        detections.append((bbox, text, conf, avg_y))
+
+    detections.sort(key=lambda item: item[3])
+
+    rows = []
+    current_row = []
+    current_row_y = None
+
+    for detection in detections:
+        bbox, text, conf, avg_y = detection
+        if current_row_y is None:
+            current_row_y = avg_y
+            current_row.append(detection)
+        elif abs(avg_y - current_row_y) <= y_threshold:
+            current_row.append(detection)
+        else:
+            current_row.sort(key=lambda item: min(pt[0] for pt in item[0]))
+            rows.append(current_row)
+            current_row = [detection]
+            current_row_y = avg_y
+
+    if current_row:
+        current_row.sort(key=lambda item: min(pt[0] for pt in item[0]))
+        rows.append(current_row)
+
+    organized_rows = '\n'.join([' '.join([text for _, text, _, _ in row]) for row in rows])
+    return organized_rows
+
+def easyocr_get_recognized_text(image_path, threshold=170):
+    gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+    reader = get_easyocr_reader()
+    results = reader.readtext(binary)
+    text = group_easyocr_results_by_row(results)
+    text += "\n"
+    return text
 
 def extract_file_paths_from_excel(excel_path: str = DATABASE_FILE_NAME, sheet_name: str = 0) -> List[str]:
     """
@@ -89,7 +141,7 @@ def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_
 def add_format_parameters(text, format):
     parameters = {}
 
-    if format == FORMATS.NEW.FULL_WITH_POST or format == FORMATS.NEW.FULL_WITHOUT_POST or format == FORMATS.NEW.ONLY_SPIROMETRY_WITH_POST or format == FORMATS.NEW.ONLY_SPIROMETRY_WITHOUT_POST:
+    if format == FORMATS.NEW:
         if re.findall(WITH_POST_IDENTIFIER, text, re.IGNORECASE):
             parameters.update(NEW_ONLY_SPIROMETRY_WITH_POST_SPECIFIC_REGEX_FIELDS)
             if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
@@ -99,7 +151,7 @@ def add_format_parameters(text, format):
             if re.findall(NEW_SPIROMETRY_FULL_IDENTIFIER, text, re.IGNORECASE):
                 parameters.update(NEW_FULL_WITHOUT_POST_SPECIFIC_REGEX_FIELDS)
 
-    elif format == FORMATS.OLD.FULL or format == FORMATS.OLD.ONLY_SPIROMETRY_WITH_POST or format == FORMATS.OLD.ONLY_SPIROMETRY_WITHOUT_POST:
+    elif format == FORMATS.OLD:
         if re.search(r"(Pred\s+LLN\s+Pre\s+Pre[t%]Pred\s+Post)", text, re.IGNORECASE):
             if re.search(
                     r"[\nVCE]{3}\s+[\[\(\{c]{1,2}[IL]+[\]\)\}J]{1,2}\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)\s+([\d.,Olt-]+)[\s+%&3¢]{2}",
@@ -121,15 +173,23 @@ def add_format_parameters(text, format):
 def get_regex_params(text):
     if re.findall(OLD_FORMAT_IDENTIFIER, text, re.IGNORECASE):
         patterns = BASE_OLD_REGEX_FIELDS.copy()
-        patterns.update(add_format_parameters(text, FORMATS.OLD.FULL))
+        patterns.update(add_format_parameters(text, FORMATS.OLD))
     elif re.findall(THIRD_FORMAT_IDENTIFIER, text, re.IGNORECASE):
         patterns = BASE_THIRD_REGEX_FEILDS.copy()
         patterns.update(add_format_parameters(text, FORMATS.THIRD.FULL))
     else:
         patterns = BASE_NEW_REGEX_FIELDS.copy()
-        patterns.update(add_format_parameters(text, FORMATS.NEW.FULL_WITH_POST))
+        patterns.update(add_format_parameters(text, FORMATS.NEW))
 
     return patterns
+
+def _fix_ocr_chars(raw: str) -> str:
+    s = raw.lower()
+    s = s.replace("o", "0").replace("l", "1")
+    s = s.replace(",", ".").replace("~", "-").replace("..", ".")
+    # Replace 's' only when it appears as a standalone token (isolated misread digit), not as a suffix
+    s = re.sub(r'(?<!\d)s(?!\w)', '5', s)
+    return s
 
 def extract_text(text):
     data = {}
@@ -142,7 +202,7 @@ def extract_text(text):
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 if field not in TEXT_FIELDS:
-                    data[field] = " ".join(match.groups()).lower().replace("o","0").replace("l","1").replace(",", ".").replace("~", "-").replace('..', '.').replace('s', '5')
+                    data[field] = _fix_ocr_chars(" ".join(match.groups()))
                 else:
                     data[field] = " ".join(match.groups())
             else:
@@ -175,46 +235,35 @@ def get_new_or_old_format_from_text(text):
         print("Old format detected, using tesseract")
         return tesseract_get_recognized_text, 150, 70
     elif new_identifier and not old_identifier and not third_identifier:
-        print("New format identifier detected, using tesseract")
+        print("New format detected, using easyocr")
+        return easyocr_get_recognized_text, 180, 35
     elif third_identifier and not old_identifier and not new_identifier:
-        print("Third format identifier detected, using tesseract")
+        print("Third format detected, using tesseract")
         return tesseract_get_recognized_text, 150, 70
     else:
-        print("Couldn't detect format. Defaulting to tesseract")
-
-    return tesseract_get_recognized_text, 150, 70
+        print("Couldn't detect format. Defaulting to easyocr")
+        return easyocr_get_recognized_text, 180, 35
 
 def separate_new_from_old_format(images_path):
     text = ""
     for image_path in images_path:
-        text += tesseract_get_recognized_text(image_path, 150)
+        text += easyocr_get_recognized_text(image_path, 180)
 
     return get_new_or_old_format_from_text(text)
 
 def process_file(pdf_path):
     debugging_data = ""
     img_path = convert_pdf_to_jpegs(pdf_path)
-
-    # Try Otsu and a fixed threshold; pick whichever extracts more fields
-    best = ({}, 0, "", -1)
-    for label, get_fn, thresh in [
-        ("Otsu", tesseract_get_recognized_text_otsu, None),
-        ("t=172", tesseract_get_recognized_text, 172),
-    ]:
-        text = "".join(get_fn(p, thresh) for p in img_path)
-        data, value, num = extract_text(text)
-        print(f"{label}: {value}/{num} fields matched")
-        if value > best[1]:
-            best = (data, value, text, num)
-
-    data, value, text, num = best
-    debugging_data += "Current pdf path: " + pdf_path + "\n\n" + text + "\n\n"
-    try:
-        t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
-        append_data(t)
-    except Exception as e:
-        t = "Bad!"
-
+    get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
+    data, value, text, _ = analyze_images(
+        img_path, get_text_func,
+        base_threshold_level=base_thresh,
+        num_of_thresholds=num_of_thresh
+    )
+    debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
+    debugging_data += (text + "\n\n")
+    t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
+    append_data(t)
     delete_images(img_path)
     return t, debugging_data
 
