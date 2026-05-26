@@ -18,7 +18,8 @@ _easyocr_reader = None
 def get_easyocr_reader():
     global _easyocr_reader
     if _easyocr_reader is None:
-        _easyocr_reader = easyocr.Reader(['en'], gpu=False)
+        model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
+        _easyocr_reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
     return _easyocr_reader
 
 def group_easyocr_results_by_row(ocr_results, y_threshold=15):
