@@ -29,6 +29,10 @@ RUN cd Frontend && npm install && npm run build
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r Backend/Scripts/ExtractorFiles/requirements.txt
 
+# Pre-download EasyOCR model weights at build time so they are baked into
+# the image — prevents the runtime OOM caused by downloading ~200MB on first request
+RUN python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
+
 EXPOSE 10000
 
 CMD gunicorn \
