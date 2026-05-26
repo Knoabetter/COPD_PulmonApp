@@ -2,6 +2,7 @@ import os
 import re
 import cv2
 import logging
+import psutil
 import pandas as pd
 from typing import List
 from pdf2image import convert_from_path
@@ -12,6 +13,11 @@ from consts import *
 from save_data import append_data
 from verification import verify_data_results
 
+def log_memory(label):
+    mb = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
+    print(f"[MEM] {label}: {mb:.0f} MB")
+
+log_memory("module load")
 
 def group_easyocr_results_by_row(ocr_results, y_threshold=15):
     detections = []
@@ -248,13 +254,17 @@ def separate_new_from_old_format(images_path):
 
 def process_file(pdf_path):
     debugging_data = ""
+    log_memory("start")
     img_path = convert_pdf_to_jpegs(pdf_path)
+    log_memory("after convert")
     get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
+    log_memory("after format detect")
     data, value, text, _ = analyze_images(
         img_path, get_text_func,
         base_threshold_level=base_thresh,
         num_of_thresholds=num_of_thresh
     )
+    log_memory("after analyze")
     debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
     debugging_data += (text + "\n\n")
     t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
