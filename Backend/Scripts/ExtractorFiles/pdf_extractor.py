@@ -250,35 +250,36 @@ def get_new_or_old_format_from_text(text):
         print("Couldn't detect format. Defaulting to easyocr")
         return easyocr_get_recognized_text, 180, 35
 
-def separate_new_from_old_format(images_path):
+def separate_new_from_old_format(images_path, reader=None):
     text = ""
     for image_path in images_path:
-        text += easyocr_get_recognized_text(image_path, 180)
+        text += easyocr_get_recognized_text(image_path, 180, reader)
 
     return get_new_or_old_format_from_text(text)
 
 def process_file(pdf_path):
     import gc
-    debugging_data = ""
     log_memory("start")
+    debugging_data = ""
     img_path = convert_pdf_to_jpegs(pdf_path)
     log_memory("after convert")
 
-    get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
+    # Load EasyOCR once upfront — reused for format detection AND the full sweep
+    model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
+    reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
+    log_memory("after easyocr load")
+
+    get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path, reader)
     log_memory("after format detect")
 
-    reader = None
     if get_text_func == easyocr_get_recognized_text:
-        model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
-        reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
-        log_memory("after easyocr load")
+        data, value, text, _ = analyze_images(img_path, get_text_func, base_thresh, num_of_thresh, reader)
+    else:
+        del reader
+        gc.collect()
+        reader = None
+        data, value, text, _ = analyze_images(img_path, get_text_func, base_thresh, num_of_thresh)
 
-    data, value, text, _ = analyze_images(
-        img_path, get_text_func,
-        base_threshold_level=base_thresh,
-        num_of_thresholds=num_of_thresh,
-        reader=reader
-    )
     log_memory("after analyze")
 
     if reader is not None:
