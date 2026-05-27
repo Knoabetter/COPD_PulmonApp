@@ -52,17 +52,19 @@ def group_easyocr_results_by_row(ocr_results, y_threshold=15):
     organized_rows = '\n'.join([' '.join([text for _, text, _, _ in row]) for row in rows])
     return organized_rows
 
-def easyocr_get_recognized_text(image_path, threshold=170):
+def easyocr_get_recognized_text(image_path, threshold=170, reader=None):
     import gc
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     _, binary = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
-    model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
-    reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
-    results = reader.readtext(binary)
-    text = group_easyocr_results_by_row(results) + "\n"
-    del reader
-    gc.collect()
-    return text
+    if reader is None:
+        model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
+        reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
+        results = reader.readtext(binary)
+        del reader
+        gc.collect()
+    else:
+        results = reader.readtext(binary)
+    return group_easyocr_results_by_row(results) + "\n"
 
 def extract_file_paths_from_excel(excel_path: str = DATABASE_FILE_NAME, sheet_name: str = 0) -> List[str]:
     """
@@ -113,7 +115,7 @@ def tesseract_get_recognized_text_otsu(image_path, _threshold=None):
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return pytesseract.image_to_string(binary, config='--oem 1') + "\n"
 
-def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_thresholds=40):
+def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_thresholds=40, reader=None):
 
     best_threshold = ({}, 0, "", -1)
     no_improve_streak = 0
@@ -121,7 +123,10 @@ def analyze_images(images_path, get_text_func, base_threshold_level=170, num_of_
     for i in range(base_threshold_level + 1, base_threshold_level + num_of_thresholds + 1, 3):
         text = ""
         for image_path in images_path:
-            text += get_text_func(image_path, i)
+            if reader is not None:
+                text += get_text_func(image_path, i, reader)
+            else:
+                text += get_text_func(image_path, i)
 
         data, value, num = extract_text(text)
 
@@ -253,18 +258,34 @@ def separate_new_from_old_format(images_path):
     return get_new_or_old_format_from_text(text)
 
 def process_file(pdf_path):
+    import gc
     debugging_data = ""
     log_memory("start")
     img_path = convert_pdf_to_jpegs(pdf_path)
     log_memory("after convert")
+
     get_text_func, base_thresh, num_of_thresh = separate_new_from_old_format(img_path)
     log_memory("after format detect")
+
+    reader = None
+    if get_text_func == easyocr_get_recognized_text:
+        model_dir = os.environ.get('EASYOCR_MODULE_PATH', None)
+        reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=model_dir)
+        log_memory("after easyocr load")
+
     data, value, text, _ = analyze_images(
         img_path, get_text_func,
         base_threshold_level=base_thresh,
-        num_of_thresholds=num_of_thresh
+        num_of_thresholds=num_of_thresh,
+        reader=reader
     )
     log_memory("after analyze")
+
+    if reader is not None:
+        del reader
+        gc.collect()
+        log_memory("after easyocr unload")
+
     debugging_data += ("Current pdf path: " + pdf_path + "\n\n")
     debugging_data += (text + "\n\n")
     t = verify_data_results(data, VALIDATION_FIELDS[data["Format"]])
