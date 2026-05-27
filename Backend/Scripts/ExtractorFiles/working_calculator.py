@@ -155,40 +155,48 @@ class WorkingGLI2012Calculator:
             print(f"    ❌ GLI FVC error: {e}")
             return np.nan, np.nan
     
-    def calculate_ratio(self, age, sex):
-        """Calculate GLI FEV1/FVC ratio - FIXED VERSION"""
+    def calculate_ratio(self, age, sex, height):
+        """Calculate GLI 2012 FEV1/FVC ratio using correct log-normal LMS framework"""
         try:
             Mspline, Sspline, Lspline = self.get_splines('FEV1_FVC', sex, age)
             if np.isnan(Mspline):
                 return np.nan, np.nan
-            
-            # CORRECT GLI 2012 ratio calculation (NOT logarithmic)
+
+            # GLI 2012 FEV1/FVC coefficients (from lookuptables.xlsx FEV1FVC sheets)
             if sex == 'M':
-                base_ratio = 0.8805 - 0.0050 * age + 0.000058 * (age**2)
-                p0, p1 = -2.9595, 0.1934
-                q0, q1 = 4.7101, 0.0
+                a0, a1, a2 = 0.7403, -0.1595, -0.0366
+                p0, p1 = -2.9595, 0.1156
+                q0, q1 = 4.7101, -0.6774
             else:
-                base_ratio = 0.8642 - 0.0046 * age + 0.000055 * (age**2)
-                p0, p1 = -3.2395, 0.2297
-                q0, q1 = 7.0320, 0.0
-            
-            # Ratio = base + spline (NOT exponential)
-            predicted = base_ratio + Mspline
-            predicted = max(0.30, min(0.95, predicted))  # Constrain
-            
-            # Calculate LLN for ratio
+                a0, a1, a2 = 0.550559, -0.107805, -0.054419
+                p0, p1 = -3.23948, 0.18503
+                q0, q1 = 7.032, -1.197
+
             ln_age = np.log(age)
+            ln_height = np.log(height)
+
+            # Predicted (median)
+            ln_M = a0 + a1 * ln_height + a2 * ln_age + Mspline
+            predicted = np.exp(ln_M)
+            predicted = max(0.30, min(0.95, predicted))
+
+            # LLN using Box-Cox framework
             ln_S = p0 + p1 * ln_age + Sspline
             S = np.exp(ln_S)
-            
-            # LLN for ratio is subtractive, not multiplicative
-            LLN = predicted - 1.645 * S
+            L = q0 + q1 * ln_age + Lspline
+
+            if abs(L) > 0.01:
+                term = 1 - 1.645 * L * S
+                LLN = predicted * (term ** (1/L)) if term > 0 else predicted * np.exp(-1.645 * S)
+            else:
+                LLN = predicted * np.exp(-1.645 * S)
+
             LLN = max(0.20, LLN)
-            
-            print(f"    GLI ratio {sex}: base={base_ratio:.4f}, +spline={Mspline:.6f} -> {predicted:.4f}")
-            
+
+            print(f"    GLI ratio {sex}: ln_M={ln_M:.4f} -> predicted={predicted:.4f}, LLN={LLN:.4f}")
+
             return predicted, LLN
-            
+
         except Exception as e:
             print(f"    ❌ GLI ratio error: {e}")
             return np.nan, np.nan
@@ -208,7 +216,7 @@ class WorkingGLI2012Calculator:
         results['FVC_GLI_LLN'] = fvc_lln
         
         # Ratio
-        ratio_pred, ratio_lln = self.calculate_ratio(age, sex)
+        ratio_pred, ratio_lln = self.calculate_ratio(age, sex, height)
         results['FEV1_FVC_GLI_pred'] = ratio_pred
         results['FEV1_FVC_GLI_LLN'] = ratio_lln
         
@@ -239,9 +247,15 @@ class MurrayCalculator:
             fvc_pred = max(0.5, fvc_pred)
             
             results['FEV1_Murray_pred'] = fev1_pred
-            results['FEV1_Murray_LLN'] = fev1_pred * 0.80
             results['FVC_Murray_pred'] = fvc_pred
-            results['FVC_Murray_LLN'] = fvc_pred * 0.80
+
+            if sex == 'M':
+                fev1_rsd, fvc_rsd = 0.52, 0.58
+            else:
+                fev1_rsd, fvc_rsd = 0.37, 0.45
+
+            results['FEV1_Murray_LLN'] = max(0.3, fev1_pred - 1.645 * fev1_rsd)
+            results['FVC_Murray_LLN'] = max(0.3, fvc_pred - 1.645 * fvc_rsd)
             
             if fev1_pred > 0 and fvc_pred > 0:
                 ratio = fev1_pred / fvc_pred
@@ -354,9 +368,7 @@ class ClinicalInterpreter:
                     fev1_z_score = (fev1_measured - fev1_pred) / ((fev1_pred - fev1_lln) / 1.645)
                     interpretation['fev1_z_score'] = fev1_z_score
                     
-                    if fev1_z_score >= -1.645:
-                        interpretation['severity'] = 'Normal'
-                    elif fev1_z_score >= -2.5:
+                    if fev1_z_score >= -2.5:
                         interpretation['severity'] = 'Mild'
                     elif fev1_z_score >= -4.0:
                         interpretation['severity'] = 'Moderate' 
@@ -613,12 +625,29 @@ class ClinicalInterpreter:
             if rv_tlc_meas is not None:
                 volume_interpretation["values"]["RV/TLC_meas"] = float(rv_tlc_meas)
 
-            # ── Lung volumes flowchart (WhatsApp image / ERS 2022) ────────────
-            # Approximate: TLC <80% ≈ 5th percentile, >120% ≈ 95th percentile
-            #              RV/TLC >120% ≈ 95th percentile (air trapping)
-            tlc_low  = tlc_percent is not None and tlc_percent < 80
+            # ── Lung volumes flowchart (ERS 2022) ────────────────────────────
+            # Prefer machine LLN values when available; fall back to 80%/120% approximation
+            tlc_lln_val    = extracted_data.get('TLC_LLN')
+            rv_tlc_lln_val = extracted_data.get('RV % TLC_LLN')
+
+            if tlc_meas is not None and tlc_lln_val is not None:
+                try:
+                    tlc_low = float(tlc_meas) < float(tlc_lln_val)
+                except (ValueError, TypeError):
+                    tlc_low = tlc_percent is not None and tlc_percent < 80
+            else:
+                tlc_low = tlc_percent is not None and tlc_percent < 80
+
+            # High TLC (hyperinflation) — no LLN for upper bound, use 120% approximation
             tlc_high = tlc_percent is not None and tlc_percent > 120
-            air_trap = rv_tlc_percent is not None and rv_tlc_percent > 120  # FRC/TLC or RV/TLC >95th
+
+            if rv_tlc_meas is not None and rv_tlc_lln_val is not None:
+                try:
+                    air_trap = float(rv_tlc_meas) > float(rv_tlc_lln_val) * 1.3  # >95th ≈ >130% of LLN
+                except (ValueError, TypeError):
+                    air_trap = rv_tlc_percent is not None and rv_tlc_percent > 120
+            else:
+                air_trap = rv_tlc_percent is not None and rv_tlc_percent > 120
 
             if tlc_low:
                 # Restriction present
