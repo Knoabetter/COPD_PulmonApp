@@ -28,3 +28,8 @@ __pycache__/
 
 # Build output — NOT ignored (Render needs dist/ committed or built at deploy time)
 # dist/
+*.csv
+Backend/Scripts/Data/PDF/
+*.tmp
+.claude/settings.local.json
+OGfiles/

@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"fix: replace EasyOCR with pytesseract to eliminate PyTorch/OOM:*)",
+      "Bash(git push:*)",
+      "Bash(find c:UsersNoadiCOPD_PulmonWebApp -name *test* -o -name *.test.* -o -name *.spec.*)"
     ]
   }
 }

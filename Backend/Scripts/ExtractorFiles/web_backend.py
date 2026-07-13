@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import sys
 import os
 # Ensure this file's directory is on sys.path so local modules
@@ -83,7 +86,7 @@ class FORMATS(Enum):
 """ 
 Enhanced Database Configuration
 """
-DATABASE_FILE_NAME = "copd_extracted_data_trial.xlsx" 
+DATABASE_FILE_NAME = "copd_extracted_data_trial.xlsx" ##consider renaming the file
 ## TODO ##
 PDF_EXTRACTOR_AVAILABLE = False
 get_data_from_file = None
@@ -128,10 +131,13 @@ app.json = _NumpyJSONProvider(app)
 JWT_SECRET      = os.environ.get('JWT_SECRET', 'dev-secret-change-in-production')
 AUTH_USERNAME   = os.environ.get('AUTH_USERNAME', 'admin')
 AUTH_PASSWORD_HASH = os.environ.get('AUTH_PASSWORD_HASH', '')
+DEV_MODE = os.environ.get('FLASK_ENV') == 'development'
 
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if DEV_MODE:
+            return f(*args, **kwargs)
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
         if not token:
             return jsonify({'error': 'Unauthorized'}), 401
@@ -149,13 +155,11 @@ REACT_BUILD = os.path.join(
     '..', '..', '..', 'Frontend', 'dist'
 )
 
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..', 'Data', 'uploads')
 ALLOWED_EXTENSIONS = {'pdf'}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
-
 # Create upload directory
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 

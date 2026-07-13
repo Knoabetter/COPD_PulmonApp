@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Activity } from 'lucide-react';
 import { t } from '../translations';
 
@@ -9,6 +9,12 @@ const LoginPage = ({ onLogin }: { onLogin: (token: string) => void }) => {
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      onLogin('dev-token-local');
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

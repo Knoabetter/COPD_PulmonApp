@@ -31,6 +31,16 @@ def expand_full_numeric_row(data, key):
         data[key + '_POST'] = None
         data[key + '_POST_PERCENT'] = None
         data[key + '_DCHANGE'] = None
+    elif data[key].count(' ') == 4:
+        pred, pre, pred_pre_percent, post, pred_post_percent = data[key].split(' ')
+
+        data[key + '_PRED'] = pred
+        data[key + '_LLN'] = None
+        data[key + '_PRE'] = pre
+        data[key + '_PRE_PERCENT'] = pred_pre_percent
+        data[key + '_POST'] = post
+        data[key + '_POST_PERCENT'] = pred_post_percent
+        data[key + '_DCHANGE'] = None
     elif data[key].count(' ') == 5:
         pred, pre, pred_pre_percent, post, pred_post_percent, dchange = data[key].split(' ')
 
@@ -51,6 +61,14 @@ def expand_full_numeric_row(data, key):
         data[key + '_POST'] = post
         data[key + '_POST_PERCENT'] = pred_post_percent
         data[key + '_DCHANGE'] = dchange
+    else:
+        data[key + '_PRED'] = None
+        data[key + '_LLN'] = None
+        data[key + '_PRE'] = None
+        data[key + '_PRE_PERCENT'] = None
+        data[key + '_POST'] = None
+        data[key + '_POST_PERCENT'] = None
+        data[key + '_DCHANGE'] = None
 
     del data[key]
 
