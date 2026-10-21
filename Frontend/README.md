@@ -1,4 +1,4 @@
-# [App Name] — Pulmonary Spirometry Analysis Platform
+# [PolmunApp] — Pulmonary Spirometry Analysis Platform
 
 > A clinical-grade web application for spirometry interpretation, built for the Pulmonary Institute at Tel Aviv Sourasky Medical Center. Compares Murray (traditional) and GLI 2012 reference equations side-by-side to support evidence-based COPD diagnosis.
 
