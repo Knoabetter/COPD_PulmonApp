@@ -12,12 +12,12 @@ const TraditionalTab = ({ analysisResults }) => {
     );
   }
 
-  const getGoldColor = (severity) => {
-    if (severity?.includes('GOLD 1')) return 'bg-green-100 text-green-800 border-green-200';
-    if (severity?.includes('GOLD 2')) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    if (severity?.includes('GOLD 3')) return 'bg-orange-100 text-orange-800 border-orange-200';
-    if (severity?.includes('GOLD 4')) return 'bg-red-100 text-red-800 border-red-200';
-    if (severity?.includes('Normal')) return 'bg-gray-100 text-gray-800 border-gray-200';
+  // Murray Table 32.3 severity labels from the backend (exact match; order matters)
+  const getMurrayColor = (severity) => {
+    if (severity === 'Mild') return 'bg-green-100 text-green-800 border-green-200';
+    if (severity === 'Moderate') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    if (severity === 'Moderately severe') return 'bg-orange-100 text-orange-800 border-orange-200';
+    if (severity === 'Severe' || severity === 'Very severe') return 'bg-red-100 text-red-800 border-red-200';
     return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
@@ -34,13 +34,13 @@ const TraditionalTab = ({ analysisResults }) => {
       <div className="bg-white border rounded-lg p-6">
         <h4 className="text-md font-semibold mb-4">{t.tradGoldAssessment}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`p-4 rounded-lg border ${getGoldColor(traditionalResults.severity)}`}>
+          <div className={`p-4 rounded-lg border ${getMurrayColor(traditionalResults.severity)}`}>
             <div className="flex items-center justify-between">
               <span className="font-medium">{t.tradPatternLabel}</span>
               <span className="font-semibold">{traditionalResults.primary_pattern}</span>
             </div>
           </div>
-          <div className={`p-4 rounded-lg border ${getGoldColor(traditionalResults.severity)}`}>
+          <div className={`p-4 rounded-lg border ${getMurrayColor(traditionalResults.severity)}`}>
             <div className="flex items-center justify-between">
               <span className="font-medium">{t.tradSeverityLabel}</span>
               <span className="font-semibold">{traditionalResults.severity}</span>

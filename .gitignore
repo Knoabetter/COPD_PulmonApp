@@ -34,3 +34,5 @@ Backend/Scripts/Data/PDF/
 .claude/settings.local.json
 OGfiles/
 COPD Project Paper/Final Report/Literature/
+*.bak
+_old_copies/

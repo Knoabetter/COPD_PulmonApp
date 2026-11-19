@@ -858,7 +858,7 @@ def clinical_analysis():
                 elif criteria == 'traditional' and clinical_interpretation:
                     response_interpretation = {
                         'traditional': clinical_interpretation.get('traditional'),
-                        'method': 'Traditional GOLD Only'
+                        'method': 'Traditional Murray Only'
                     }
                 else:
                     response_interpretation = clinical_interpretation

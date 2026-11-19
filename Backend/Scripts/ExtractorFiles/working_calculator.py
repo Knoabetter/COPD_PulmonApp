@@ -8,6 +8,21 @@ BASE_DIR = os.environ.get('DATA_DIR', os.path.join(os.path.dirname(os.path.abspa
 INPUT_FILE = os.path.join(BASE_DIR, "copd_extracted_data_final.xlsx")
 FILE_SPIRO_GLI = os.path.join(BASE_DIR, "lookuptables.xlsx")
 
+def gli_z_score(measured, M, S, L):
+    """Exact GLI 2012 z-score from LMS (Box-Cox) parameters.
+    z = ((measured/M)^L - 1) / (L*S);  z = ln(measured/M) / S when L ~ 0.
+    Returns None if any input is missing or invalid."""
+    try:
+        measured, M, S, L = float(measured), float(M), float(S), float(L)
+    except (TypeError, ValueError):
+        return None
+    if any(np.isnan(v) for v in (measured, M, S, L)) or measured <= 0 or M <= 0 or S <= 0:
+        return None
+    if abs(L) < 1e-4:
+        return float(np.log(measured / M) / S)
+    return float(((measured / M) ** L - 1) / (L * S))
+
+
 class WorkingGLI2012Calculator:
     """GLI 2012 Calculator - FIXED RATIO VERSION"""
     
@@ -78,7 +93,7 @@ class WorkingGLI2012Calculator:
         try:
             Mspline, Sspline, Lspline = self.get_splines('FEV1', sex, age)
             if np.isnan(Mspline):
-                return np.nan, np.nan
+                return np.nan, np.nan, np.nan, np.nan, np.nan
             
             # GLI 2012 FEV1 coefficients
             if sex == 'M':
@@ -108,18 +123,18 @@ class WorkingGLI2012Calculator:
             else:
                 LLN = predicted * np.exp(-1.645 * S)
             
-            return predicted, LLN
+            return predicted, LLN, predicted, S, L   # M = predicted (median)
             
         except Exception as e:
             print(f"    ❌ GLI FEV1 error: {e}")
-            return np.nan, np.nan
+            return np.nan, np.nan, np.nan, np.nan, np.nan
     
     def calculate_fvc(self, age, sex, height):
         """Calculate GLI FVC"""
         try:
             Mspline, Sspline, Lspline = self.get_splines('FVC', sex, age)
             if np.isnan(Mspline):
-                return np.nan, np.nan
+                return np.nan, np.nan, np.nan, np.nan, np.nan
             
             # GLI 2012 FVC coefficients
             if sex == 'M':
@@ -149,18 +164,18 @@ class WorkingGLI2012Calculator:
             else:
                 LLN = predicted * np.exp(-1.645 * S)
             
-            return predicted, LLN
+            return predicted, LLN, predicted, S, L   # M = predicted (median)
             
         except Exception as e:
             print(f"    ❌ GLI FVC error: {e}")
-            return np.nan, np.nan
+            return np.nan, np.nan, np.nan, np.nan, np.nan
     
     def calculate_ratio(self, age, sex, height):
         """Calculate GLI 2012 FEV1/FVC ratio using correct log-normal LMS framework"""
         try:
             Mspline, Sspline, Lspline = self.get_splines('FEV1_FVC', sex, age)
             if np.isnan(Mspline):
-                return np.nan, np.nan
+                return np.nan, np.nan, np.nan, np.nan, np.nan
 
             # GLI 2012 FEV1/FVC coefficients (from lookuptables.xlsx FEV1FVC sheets)
             if sex == 'M':
@@ -177,8 +192,8 @@ class WorkingGLI2012Calculator:
 
             # Predicted (median)
             ln_M = a0 + a1 * ln_height + a2 * ln_age + Mspline
-            predicted = np.exp(ln_M)
-            predicted = max(0.30, min(0.95, predicted))
+            M = np.exp(ln_M)                          # unclamped median, used for z-scores
+            predicted = max(0.30, min(0.95, M))       # NOTE: clamp reviewed in Bug 7
 
             # LLN using Box-Cox framework
             ln_S = p0 + p1 * ln_age + Sspline
@@ -195,30 +210,25 @@ class WorkingGLI2012Calculator:
 
             print(f"    GLI ratio {sex}: ln_M={ln_M:.4f} -> predicted={predicted:.4f}, LLN={LLN:.4f}")
 
-            return predicted, LLN
+            return predicted, LLN, M, S, L
 
         except Exception as e:
             print(f"    ❌ GLI ratio error: {e}")
-            return np.nan, np.nan
+            return np.nan, np.nan, np.nan, np.nan, np.nan
     
     def calculate_patient(self, age, sex, height):
         """Calculate all GLI parameters for patient"""
         results = {}
         
-        # FEV1
-        fev1_pred, fev1_lln = self.calculate_fev1(age, sex, height)
-        results['FEV1_GLI_pred'] = fev1_pred
-        results['FEV1_GLI_LLN'] = fev1_lln
-        
-        # FVC
-        fvc_pred, fvc_lln = self.calculate_fvc(age, sex, height)
-        results['FVC_GLI_pred'] = fvc_pred
-        results['FVC_GLI_LLN'] = fvc_lln
-        
-        # Ratio
-        ratio_pred, ratio_lln = self.calculate_ratio(age, sex, height)
-        results['FEV1_FVC_GLI_pred'] = ratio_pred
-        results['FEV1_FVC_GLI_LLN'] = ratio_lln
+        for prefix, fn in (('FEV1', self.calculate_fev1),
+                           ('FVC', self.calculate_fvc),
+                           ('FEV1_FVC', self.calculate_ratio)):
+            pred, lln, M, S, L = fn(age, sex, height)
+            results[f'{prefix}_GLI_pred'] = pred
+            results[f'{prefix}_GLI_LLN'] = lln
+            results[f'{prefix}_GLI_M'] = M      # LMS parameters, needed for exact z-scores
+            results[f'{prefix}_GLI_S'] = S
+            results[f'{prefix}_GLI_L'] = L
         
         return results
 
@@ -249,13 +259,10 @@ class MurrayCalculator:
             results['FEV1_Murray_pred'] = fev1_pred
             results['FVC_Murray_pred'] = fvc_pred
 
-            if sex == 'M':
-                fev1_rsd, fvc_rsd = 0.52, 0.58
-            else:
-                fev1_rsd, fvc_rsd = 0.37, 0.45
-
-            results['FEV1_Murray_LLN'] = max(0.3, fev1_pred - 1.645 * fev1_rsd)
-            results['FVC_Murray_LLN'] = max(0.3, fvc_pred - 1.645 * fvc_rsd)
+            # Traditional LLN = 80% of predicted (project report §3.4.1; Murray Table 32.3
+            # defines "abnormal" as < LLN without a numeric rule).
+            results['FEV1_Murray_LLN'] = 0.80 * fev1_pred
+            results['FVC_Murray_LLN'] = 0.80 * fvc_pred
             
             if fev1_pred > 0 and fvc_pred > 0:
                 ratio = fev1_pred / fvc_pred
@@ -266,6 +273,21 @@ class MurrayCalculator:
             print(f"    ❌ Murray error: {e}")
             
         return results
+
+def parse_pred_pre_percent(raw):
+    """Parse a raw extractor string the same way save_data.expand_pred_pre_percent does.
+    3 values: "pred pre %pred"      4 values: "pred LLN pre %pred"
+    Returns dict with keys pred, lln, pre, pct (None when absent)."""
+    out = {'pred': None, 'lln': None, 'pre': None, 'pct': None}
+    if raw in (None, "", "None"):
+        return out
+    vals = str(raw).split()
+    if len(vals) == 3:
+        out['pred'], out['pre'], out['pct'] = vals
+    elif len(vals) == 4:
+        out['pred'], out['lln'], out['pre'], out['pct'] = vals
+    return out
+
 
 class ClinicalInterpreter:
     """Clinical interpretation following ERS 2022 and Traditional methods"""
@@ -299,6 +321,10 @@ class ClinicalInterpreter:
             fvc_lln = gli_results.get('FVC_GLI_LLN', 0)
             ratio_pred = gli_results.get('FEV1_FVC_GLI_pred', 0)
             ratio_lln = gli_results.get('FEV1_FVC_GLI_LLN', 0)
+
+            def _z(prefix, measured):
+                return gli_z_score(measured, gli_results.get(f'{prefix}_GLI_M'),
+                                   gli_results.get(f'{prefix}_GLI_S'), gli_results.get(f'{prefix}_GLI_L'))
             
             # Convert ratio if given as percentage
             if ratio_measured > 1:
@@ -312,6 +338,13 @@ class ClinicalInterpreter:
             if not all([fev1_measured, fvc_measured, ratio_measured]):
                 interpretation['clinical_notes'].append("Insufficient measured values for interpretation")
                 return interpretation
+
+            # Exact GLI LMS z-scores (None if LMS parameters are unavailable)
+            fev1_z = _z('FEV1', fev1_measured)
+            fvc_z = _z('FVC', fvc_measured)
+            ratio_z = _z('FEV1_FVC', ratio_measured)
+            if ratio_z is not None:
+                interpretation['fev1_fvc_z_score'] = round(ratio_z, 2)
 
             # ERS 2022 Figure 8 Algorithm - Spirometry Interpretation
             print(f"🔍 ERS 2022 Algorithm:")
@@ -331,8 +364,8 @@ class ClinicalInterpreter:
                     interpretation['primary_pattern'] = 'Possible restriction or non-specific pattern'
                     interpretation['clinical_notes'].append("Low FVC with normal FEV1/FVC - consider lung volumes")
                     interpretation['secondary_findings'].append("TLC measurement recommended")
-                    if fvc_pred > 0 and fvc_lln > 0:
-                        fvc_z_score = (fvc_measured - fvc_pred) / ((fvc_pred - fvc_lln) / 1.645)
+                    if fvc_z is not None:
+                        fvc_z_score = fvc_z
                         interpretation['fvc_z_score'] = round(fvc_z_score, 2)
                         if fvc_z_score >= -1.645:
                             fvc_severity = 'Borderline'
@@ -358,15 +391,16 @@ class ClinicalInterpreter:
                     interpretation['primary_pattern'] = 'Possible mixed disorder'
                     interpretation['clinical_notes'].append("Obstruction with possible restriction")
                     interpretation['secondary_findings'].append("Lung volumes needed to confirm mixed pattern")
-                    if fvc_pred > 0 and fvc_lln > 0:
-                        fvc_z_score = (fvc_measured - fvc_pred) / ((fvc_pred - fvc_lln) / 1.645)
-                        interpretation['fvc_z_score'] = round(fvc_z_score, 2)
-                        interpretation['clinical_notes'].append(f"FVC z-score: {fvc_z_score:.2f}")
+                    if fvc_z is not None:
+                        interpretation['fvc_z_score'] = round(fvc_z, 2)
+                        interpretation['clinical_notes'].append(f"FVC z-score: {fvc_z:.2f}")
                 
                 # Determine obstruction severity using FEV1 z-score
-                if fev1_pred > 0:
-                    fev1_z_score = (fev1_measured - fev1_pred) / ((fev1_pred - fev1_lln) / 1.645)
-                    interpretation['fev1_z_score'] = fev1_z_score
+                if fev1_z is None:
+                    interpretation['clinical_notes'].append("FEV1 z-score unavailable (GLI LMS parameters missing)")
+                else:
+                    fev1_z_score = fev1_z
+                    interpretation['fev1_z_score'] = round(fev1_z_score, 2)
                     
                     if fev1_z_score >= -2.5:
                         interpretation['severity'] = 'Mild'
@@ -390,7 +424,7 @@ class ClinicalInterpreter:
         
         return interpretation
     
-    def interpret_traditional_gold(self, measured_values, murray_results):
+    def interpret_traditional_murray(self, measured_values, murray_results):
         """
         Murray Algorithm — full flowchart (Murray_2 / Table 32.3)
         Uses fixed FEV1/FVC < 0.70 and Murray LLN (80% predicted) thresholds.
@@ -466,8 +500,11 @@ class ClinicalInterpreter:
                         interpretation['primary_pattern'] = 'Mild obstruction or normal variant'
                         interpretation['clinical_notes'].append("Low FEV1/FVC with normal FEV1 and FVC — may be a normal variant")
                     else:
-                        interpretation['primary_pattern'] = 'Obstructive ventilatory defect'
+                        # Murray_2: normal FEV1 + low FVC joins the same box as low FEV1 + low FVC
+                        interpretation['primary_pattern'] = 'Obstruction with concomitant restriction or air trapping'
                         interpretation['clinical_notes'].append("Low FEV1/FVC with low FVC despite normal FEV1")
+                        interpretation['secondary_findings'].append(
+                            "TLC recommended — Normal TLC: obstructive VD; Low TLC: mixed obstructive and restrictive defect")
 
                 # Murray Table 32.3 severity (applied when obstruction is confirmed)
                 if fev1_percent is not None and interpretation['primary_pattern'] != 'Mild obstruction or normal variant':
@@ -539,7 +576,7 @@ class ClinicalInterpreter:
             if gli_results:
                 interpretation['spirometry'] = self.interpret_ers2022_algorithm(measured_spirometry, gli_results)
             elif murray_results:
-                interpretation['spirometry'] = self.interpret_traditional_gold(measured_spirometry, murray_results)
+                interpretation['spirometry'] = self.interpret_traditional_murray(measured_spirometry, murray_results)
 
             # Derive obstruction flag from spirometry result for lung volumes flowchart
             is_obstructed = False
@@ -583,28 +620,15 @@ class ClinicalInterpreter:
             tlc_meas    = extracted_data.get("TLC_PRE")
             rv_tlc_meas = extracted_data.get("RV % TLC_PRE")
 
-            # Fallback to raw string format if expanded keys aren't present
-            # Format: measured predicted LLN %predicted
-            if rv_percent is None and extracted_data.get("RV"):
-                rv_values = str(extracted_data["RV"]).split()
-                if len(rv_values) >= 4:
-                    rv_percent = rv_values[3]
-                if rv_meas is None and len(rv_values) >= 1:
-                    rv_meas = rv_values[0]
-
-            if tlc_percent is None and extracted_data.get("TLC"):
-                tlc_values = str(extracted_data["TLC"]).split()
-                if len(tlc_values) >= 4:
-                    tlc_percent = tlc_values[3]
-                if tlc_meas is None and len(tlc_values) >= 1:
-                    tlc_meas = tlc_values[0]
-
-            if rv_tlc_percent is None and extracted_data.get("RV % TLC"):
-                rv_tlc_values = str(extracted_data["RV % TLC"]).split()
-                if len(rv_tlc_values) >= 4:
-                    rv_tlc_percent = rv_tlc_values[3]
-                if rv_tlc_meas is None and len(rv_tlc_values) >= 1:
-                    rv_tlc_meas = rv_tlc_values[0]
+            # Fallback to raw strings (only if expanded keys are missing).
+            # Real extractor layout: "pred pre %pred" or "pred LLN pre %pred".
+            raw = {k: parse_pred_pre_percent(extracted_data.get(k)) for k in ("RV", "TLC", "RV % TLC")}
+            if rv_percent is None:     rv_percent = raw["RV"]['pct']
+            if rv_meas is None:        rv_meas = raw["RV"]['pre']
+            if tlc_percent is None:    tlc_percent = raw["TLC"]['pct']
+            if tlc_meas is None:       tlc_meas = raw["TLC"]['pre']
+            if rv_tlc_percent is None: rv_tlc_percent = raw["RV % TLC"]['pct']
+            if rv_tlc_meas is None:    rv_tlc_meas = raw["RV % TLC"]['pre']
 
             # Convert to float and store
             if rv_percent is not None:
@@ -627,8 +651,8 @@ class ClinicalInterpreter:
 
             # ── Lung volumes flowchart (ERS 2022) ────────────────────────────
             # Prefer machine LLN values when available; fall back to 80%/120% approximation
-            tlc_lln_val    = extracted_data.get('TLC_LLN')
-            rv_tlc_lln_val = extracted_data.get('RV % TLC_LLN')
+            tlc_lln_val    = extracted_data.get('TLC_LLN') or raw["TLC"]['lln']
+            rv_tlc_lln_val = extracted_data.get('RV % TLC_LLN') or raw["RV % TLC"]['lln']
 
             if tlc_meas is not None and tlc_lln_val is not None:
                 try:
@@ -638,15 +662,36 @@ class ClinicalInterpreter:
             else:
                 tlc_low = tlc_percent is not None and tlc_percent < 80
 
-            # High TLC (hyperinflation) — no LLN for upper bound, use 120% approximation
-            tlc_high = tlc_percent is not None and tlc_percent > 120
-
-            if rv_tlc_meas is not None and rv_tlc_lln_val is not None:
+            # High TLC (hyperinflation) = TLC above the ULN — same rule as RV/TLC below.
+            # ULN ≈ pred + (pred - LLN)  (APPROXIMATION: assumes a symmetric distribution;
+            # reports print no ULN). Without pred/LLN (e.g. NEW formats), fall back to %pred > 120.
+            tlc_pred_val = extracted_data.get('TLC_PRED') or raw["TLC"]['pred']
+            tlc_high = None
+            if tlc_meas is not None and tlc_lln_val is not None and tlc_pred_val is not None:
                 try:
-                    air_trap = float(rv_tlc_meas) > float(rv_tlc_lln_val) * 1.3  # >95th ≈ >130% of LLN
+                    tpred_, tlln_ = float(tlc_pred_val), float(tlc_lln_val)
+                    if tlln_ < tpred_:
+                        tlc_high = float(tlc_meas) > tpred_ + (tpred_ - tlln_)
                 except (ValueError, TypeError):
-                    air_trap = rv_tlc_percent is not None and rv_tlc_percent > 120
-            else:
+                    pass
+            if tlc_high is None:
+                tlc_high = tlc_percent is not None and tlc_percent > 120
+
+            # Air trapping = RV/TLC above the upper limit of normal (ULN).
+            # Reports print no ULN, so it is ESTIMATED by mirroring the printed LLN around
+            # the predicted value:  ULN ≈ pred + (pred - LLN)   (APPROXIMATION: assumes a
+            # symmetric distribution). Without pred/LLN, fall back to %pred > 120.
+            # (Previously LLN * 1.3, which is ~= the predicted value and flagged almost everyone.)
+            rv_tlc_pred_val = extracted_data.get('RV % TLC_PRED') or raw["RV % TLC"]['pred']
+            air_trap = None
+            if rv_tlc_meas is not None and rv_tlc_lln_val is not None and rv_tlc_pred_val is not None:
+                try:
+                    pred_, lln_ = float(rv_tlc_pred_val), float(rv_tlc_lln_val)
+                    if lln_ < pred_:
+                        air_trap = float(rv_tlc_meas) > pred_ + (pred_ - lln_)
+                except (ValueError, TypeError):
+                    pass
+            if air_trap is None:
                 air_trap = rv_tlc_percent is not None and rv_tlc_percent > 120
 
             if tlc_low:
@@ -717,15 +762,16 @@ class ClinicalInterpreter:
             fvc_pre   = extracted_data.get('FVC_PRE')
             fvc_post  = extracted_data.get('FVC_POST')
 
-            # Fallback to raw string: format is either
-            #   6-val: pred LLN pre pct_pre post pct_post dchange  → indices [2], [4]
-            #   5-val: pred pre pct_pre post pct_post dchange       → indices [1], [3]
+            # Fallback to raw string (layouts from save_data.expand_full_numeric_row):
+            #   5 vals: pred pre pct_pre post pct_post              → pre [1], post [3]
+            #   6 vals: pred pre pct_pre post pct_post dchange      → pre [1], post [3]
+            #   7 vals: pred LLN pre pct_pre post pct_post dchange  → pre [2], post [4]
             def _extract_pre_post(raw_str):
                 vals = str(raw_str).split()
                 try:
-                    if len(vals) >= 6:   # 6-value format (with LLN)
+                    if len(vals) == 7:
                         return float(vals[2]), float(vals[4])
-                    elif len(vals) >= 5: # 5-value format (no LLN)
+                    if len(vals) in (5, 6):
                         return float(vals[1]), float(vals[3])
                 except (ValueError, IndexError):
                     pass
@@ -805,42 +851,28 @@ class ClinicalInterpreter:
         }
         
         try:             # Prefer expanded percent-predicted keys
-            dlco_percent = extracted_data.get("DLCOc SB_PRE_PERCENT")
-            if dlco_percent is None:
-                dlco_percent = extracted_data.get("DLCO SB_PRE_PERCENT")
+            # OLD format: "DLCOc SB" / "DLCOc/V"; NEW format: "DLCOc" / "DLCOc/VA"
+            def _first(*keys):
+                for k in keys:
+                    v = extracted_data.get(k)
+                    if v not in (None, "", "None"):
+                        return v
+                return None
 
-            kco_percent = extracted_data.get("DLCOc/V_PRE_PERCENT")
-            if kco_percent is None:
-                kco_percent = extracted_data.get("DLCO/VA_PRE_PERCENT")
+            dlco_percent = _first("DLCOc SB_PRE_PERCENT", "DLCOc_PRE_PERCENT", "DLCO SB_PRE_PERCENT")
+            kco_percent  = _first("DLCOc/V_PRE_PERCENT", "DLCOc/VA_PRE_PERCENT", "DLCO/VA_PRE_PERCENT")
+            dlco_meas    = _first("DLCOc SB_PRE", "DLCOc_PRE", "DLCO SB_PRE")
+            kco_meas     = _first("DLCOc/V_PRE", "DLCOc/VA_PRE", "DLCO/VA_PRE")
 
-            # Absolute measured values (preferred expanded keys)
-            dlco_meas = extracted_data.get("DLCOc SB_PRE")
-            if dlco_meas is None:
-                dlco_meas = extracted_data.get("DLCO SB_PRE")
-
-            kco_meas = extracted_data.get("DLCOc/V_PRE")
-            if kco_meas is None:
-                kco_meas = extracted_data.get("DLCO/VA_PRE")
-
-            # Fallback to raw string format if needed
-            # Format: measured predicted LLN %predicted (index 0 = measured, 3 = % pred)
+            # Fallback to raw strings: "pred pre %pred" or "pred LLN pre %pred"
             if dlco_percent is None or dlco_meas is None:
-                raw_key = "DLCOc SB" if extracted_data.get("DLCOc SB") else ("DLCOc" if extracted_data.get("DLCOc") else None)
-                if raw_key:
-                    vals = str(extracted_data[raw_key]).split()
-                    if dlco_percent is None and len(vals) >= 4:
-                        dlco_percent = vals[3]
-                    if dlco_meas is None and len(vals) >= 1:
-                        dlco_meas = vals[0]
-
+                raw = parse_pred_pre_percent(_first("DLCOc SB", "DLCOc"))
+                dlco_percent = dlco_percent if dlco_percent is not None else raw['pct']
+                dlco_meas    = dlco_meas    if dlco_meas    is not None else raw['pre']
             if kco_percent is None or kco_meas is None:
-                raw_key = "DLCOc/V" if extracted_data.get("DLCOc/V") else ("DLCOc/VA" if extracted_data.get("DLCOc/VA") else None)
-                if raw_key:
-                    vals = str(extracted_data[raw_key]).split()
-                    if kco_percent is None and len(vals) >= 4:
-                        kco_percent = vals[3]
-                    if kco_meas is None and len(vals) >= 1:
-                        kco_meas = vals[0]
+                raw = parse_pred_pre_percent(_first("DLCOc/V", "DLCOc/VA"))
+                kco_percent = kco_percent if kco_percent is not None else raw['pct']
+                kco_meas    = kco_meas    if kco_meas    is not None else raw['pre']
 
             # Store absolute measured values
             if dlco_meas is not None:
@@ -990,7 +1022,7 @@ def perform_clinical_interpretation(murray_results, gli_results, measured_values
     print(f"Patient: {age}y {sex}")
     print("=" * 50)
     ers2022_interpretation = interpreter.interpret_ers2022_algorithm(measured_values, gli_results)
-    traditional_interpretation = interpreter.interpret_traditional_gold(measured_values, murray_results)
+    traditional_interpretation = interpreter.interpret_traditional_murray(measured_values, murray_results)
     
     # Print spirometry results
     print(f"\n--- ERS 2022 INTERPRETATION ---")
@@ -999,7 +1031,7 @@ def perform_clinical_interpretation(murray_results, gli_results, measured_values
     for note in ers2022_interpretation['clinical_notes']:
         print(f"  • {note}")
     
-    print(f"\n--- TRADITIONAL GOLD INTERPRETATION ---")
+    print(f"\n--- TRADITIONAL MURRAY INTERPRETATION ---")
     print(f"Pattern: {traditional_interpretation['primary_pattern']}")
     print(f"Severity: {traditional_interpretation['severity']}")
     for note in traditional_interpretation['clinical_notes']:
@@ -1064,6 +1096,7 @@ def perform_clinical_interpretation(murray_results, gli_results, measured_values
         has_extended_data = any(extracted_data.get(k) not in (None, "", "None")
             for k in ["RV_PRE", "TLC_PRE", "RV % TLC_PRE",
                      "DLCOc SB_PRE", "DLCOc/V_PRE",
+                     "DLCOc_PRE", "DLCOc/VA_PRE",
                      "DLCO SB_PRE", "DLCO/VA_PRE"
     ]
 )

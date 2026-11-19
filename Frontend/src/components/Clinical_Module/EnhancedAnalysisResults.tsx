@@ -633,7 +633,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
               )}
             </div>
 
-            {/* Traditional GOLD */}
+            {/* Traditional Murray */}
             <div className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-500" />
@@ -805,7 +805,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
                 <li>• Murray CJ et al. Traditional Reference Equations</li>
                 <li>• Fixed threshold: FEV1/FVC &lt; 0.70</li>
                 <li>• 80% predicted as LLN</li>
-                <li>• GOLD severity staging by FEV1 % predicted</li>
+                <li>• Murray Table 32.3 severity grading by FEV1 % predicted</li>
               </ul>
             </div>
             <div className="sm:col-span-2 border-t border-slate-100 pt-3 mt-1">

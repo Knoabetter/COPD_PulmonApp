@@ -116,10 +116,18 @@ def expand_pre_post_dchange(data, key):
         data[key + '_POST'] = None
         data[key + '_DCHANGE'] = None
     elif data[key].count(' ') == 1:
-        pre, post = data[key].split(' ')
-
-        data[key + '_PRE'] = pre
-        data[key + '_POST'] = post
+        if key == "FEV 1 % FVC":
+            # NEW formats print the ratio row as "Ref Pre" when there is no post-BD
+            # column (or post failed OCR) -> first value is PREDICTED, second is measured.
+            # If a new format ever produces 2 values with a different meaning, update this.
+            pred, pre = data[key].split(' ')
+            data[key + '_PRED'] = pred
+            data[key + '_PRE'] = pre
+            data[key + '_POST'] = None
+        else:
+            pre, post = data[key].split(' ')
+            data[key + '_PRE'] = pre
+            data[key + '_POST'] = post
         data[key + '_DCHANGE'] = None
     elif data[key].count(' ') == 2:
         pre, post, dchange = data[key].split(' ')

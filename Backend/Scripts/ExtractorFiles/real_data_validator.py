@@ -8,6 +8,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from working_calculator import WorkingGLI2012Calculator, MurrayCalculator
 
+# Plausibility ranges — rows outside these are logged as failures, not used.
+AGE_RANGE    = (18, 95)      # adults only; GLI 2012 tables end at 95
+HEIGHT_RANGE = (120, 220)    # cm
+RATIO_RANGE  = (0.20, 1.00)  # measured FEV1/FVC as a fraction
+
 def get_real_data_location():
     """Get the exact location of your real extracted data"""
     
@@ -20,8 +25,9 @@ def get_real_data_location():
     print("2. Excel file (specify exact file path)")
     print("3. React frontend state/localStorage")
     print("4. Flask backend API endpoints")
+    print("5. JSON file")
     
-    choice = input("\nEnter option (1-4): ").strip()
+    choice = input("\nEnter option (1-5): ").strip()
     
     if choice == "1":
         return get_database_connection()
@@ -31,6 +37,8 @@ def get_real_data_location():
         return get_frontend_data()
     elif choice == "4":
         return get_api_data()
+    elif choice == "5":
+        return get_json_file()
     else:
         print("Invalid choice. Using Excel entry mode.")
         return get_excel_file()
@@ -81,6 +89,7 @@ def get_excel_file():
         print(f"XLSX error: {e}")
         return None
 
+def get_json_file():
     """Get JSON file path"""
     print("\n📋 JSON FILE ACCESS")
     file_path = input("Enter exact JSON file path: ").strip()
@@ -189,6 +198,20 @@ def load_real_data(data_source):
     
     return None
 
+def get_measured_ratio_fraction(patient):
+    """Measured FEV1/FVC as a FRACTION (0-1), or None.
+    Looks at 'measured_ratio', then the DB column 'FEV 1 % FVC_PRE' (percent),
+    then FEV1_PRE / FVC_PRE. Values > 1.5 are treated as percent."""
+    for key in ('measured_ratio', 'FEV 1 % FVC_PRE'):
+        v = pd.to_numeric(patient.get(key), errors='coerce')
+        if pd.notna(v) and v > 0:
+            return float(v) / 100.0 if v > 1.5 else float(v)
+    fev1 = pd.to_numeric(patient.get('FEV1_PRE'), errors='coerce')
+    fvc = pd.to_numeric(patient.get('FVC_PRE'), errors='coerce')
+    if pd.notna(fev1) and pd.notna(fvc) and fvc > 0:
+        return float(fev1) / float(fvc)
+    return None
+
 def validate_with_real_data():
     """Main validation function using real data"""
     
@@ -214,89 +237,102 @@ def validate_with_real_data():
     # Initialize calculators
     murray_calc = MurrayCalculator()
     gli_calc = WorkingGLI2012Calculator()
-    gli_calc.load_gli_tables()
-    
+    if not gli_calc.load_gli_tables():
+        print("❌ GLI tables could not be loaded — aborting.")
+        return None
+
     validation_results = []
     diagnostic_results = []
-    
+    failures = []
+
     # Process each real patient
-    for i, patient in enumerate(real_patients[:]):  
-        print(f"\nProcessing Patient {i+1}: {patient.get('patient_id', f'Patient_{i+1}')}")
-        
+    for i, patient in enumerate(real_patients):
+        patient_id = patient.get('ID', patient.get('patient_id', f'Patient_{i+1}'))
+        print(f"\nProcessing Patient {i+1}: {patient_id}")
+
         try:
-            # Ensure required fields exist
             age = float(patient['Age'])
-            sex = str(patient['Sex']).upper()
+            sex = str(patient['Sex']).strip().upper()[:1]
             height = float(patient['Height'])
+            if pd.isna(age) or pd.isna(height) or sex not in ('M', 'F'):
+                raise ValueError(f"invalid demographics: Age={patient.get('Age')}, Sex={patient.get('Sex')}, Height={patient.get('Height')}")
+            if not (AGE_RANGE[0] <= age <= AGE_RANGE[1]):
+                raise ValueError(f"age out of range {AGE_RANGE}: {age}")
+            if not (HEIGHT_RANGE[0] <= height <= HEIGHT_RANGE[1]):
+                raise ValueError(f"height out of range {HEIGHT_RANGE}: {height}")
             print(f"  {age}y {sex} {height}cm")
-            
-           # Ensure measured_ratio is a fraction (0–1) even if extracted as %
-            if patient.get('measured_ratio') is not None:
-                mr = float(patient['measured_ratio'])
-                measured_ratio = mr / 100.0 if mr > 1.5 else mr
-            else:
-                measured_ratio = None
 
-            # Diagnose using fractions
-            gli_lln = gli_result.get('FEV1_FVC_GLI_LLN', 0.70)
-            murray_copd = (measured_ratio is not None) and (measured_ratio < 0.70)
-            gli_copd    = (measured_ratio is not None) and (measured_ratio < gli_lln)
+            # Predicted values from BOTH calculators, per patient
+            murray_results = murray_calc.calculate_patient(age, sex, height)
+            gli_results = gli_calc.calculate_patient(age, sex, height)
 
-            diagnostic_result = {
+            validation_result = {
                 'Case': i + 1,
-                'Patient_ID': patient.get('patient_id', f'Patient_{i+1}'),
-                'Source_ID': patient.get('ID', patient.get('Patient_ID', f'Patient_{i+1}')),  # optional stable key
+                'Patient_ID': patient_id,
+                'Source_ID': patient_id,
                 'Age': age,
                 'Sex': sex,
-                'measured_ratio': measured_ratio,
-                'measured_ratio_pct': round(measured_ratio*100, 1) if measured_ratio is not None else None,
-                'gli_lln': round(gli_lln, 4),
-                'gli_lln_pct': round(gli_lln*100, 1),
-                'murray_diagnosis': 'COPD' if murray_copd else 'Normal',
-                'GLI_diagnosis': 'COPD' if gli_copd else 'Normal',
-                'Agreement': 'Yes' if murray_copd == gli_copd else 'No'
-
-
+                'Height': height,
+                'murray_fev1':  murray_results.get('FEV1_Murray_pred'),
+                'gli_fev1':     gli_results.get('FEV1_GLI_pred'),
+                'murray_fvc':   murray_results.get('FVC_Murray_pred'),
+                'gli_fvc':      gli_results.get('FVC_GLI_pred'),
+                'murray_ratio': murray_results.get('FEV1_FVC_Murray_pred'),
+                'gli_ratio':    gli_results.get('FEV1_FVC_GLI_pred'),
+                'gli_ratio_lln': gli_results.get('FEV1_FVC_GLI_LLN'),
             }
-            
-            # Calculate differences
-            validation_result['fev1_diff'] = abs(validation_result['murray_fev1'] - validation_result['gli_fev1'])
+            missing = [k for k, v in validation_result.items()
+                       if k.startswith(('murray_', 'gli_')) and (v is None or pd.isna(v))]
+            if missing:
+                raise ValueError(f"calculator returned no value for {missing}")
+
+            validation_result['fev1_diff']  = abs(validation_result['murray_fev1']  - validation_result['gli_fev1'])
             validation_result['ratio_diff'] = abs(validation_result['murray_ratio'] - validation_result['gli_ratio'])
-            
             validation_results.append(validation_result)
-            
-            # Diagnostic agreement (if measured values available)
-            if patient.get('measured_ratio') is not None:
-                measured_ratio = float(patient['measured_ratio'])
-                gli_lln = gli_result.get('FEV1_FVC_GLI_LLN', 0.70)
-                
-                murray_copd = measured_ratio < 70.0
-                gli_copd = (measured_ratio / 100) < gli_lln
-                
-                diagnostic_result = {
+            print(f"  Murray FEV1: {validation_result['murray_fev1']:.3f}L, GLI: {validation_result['gli_fev1']:.3f}L")
+
+            # Diagnostic agreement — ratio is ALWAYS a fraction here
+            measured_ratio = get_measured_ratio_fraction(patient)
+            if measured_ratio is not None and not (RATIO_RANGE[0] <= measured_ratio <= RATIO_RANGE[1]):
+                failures.append({'Case': i + 1, 'Patient_ID': patient_id, 'stage': 'diagnostic',
+                                 'error': f"measured FEV1/FVC out of range {RATIO_RANGE}: {measured_ratio:.3f}"})
+                print(f"  ⚠️ measured ratio {measured_ratio:.3f} out of range — excluded from diagnostic agreement")
+                measured_ratio = None
+            elif measured_ratio is not None:
+                gli_lln = validation_result['gli_ratio_lln']
+                murray_copd = measured_ratio < 0.70
+                gli_copd = measured_ratio < gli_lln
+
+                diagnostic_results.append({
                     'Case': i + 1,
-                    'Patient_ID': patient.get('patient_id', f'Patient_{i+1}'),
+                    'Patient_ID': patient_id,
+                    'Source_ID': patient_id,
                     'Age': age,
                     'Sex': sex,
-                    'measured_ratio': measured_ratio,
-                    'gli_lln': round(gli_lln * 100, 1),
+                    'measured_ratio': round(measured_ratio, 4),
+                    'measured_ratio_pct': round(measured_ratio * 100, 1),
+                    'gli_lln': round(gli_lln, 4),
+                    'gli_lln_pct': round(gli_lln * 100, 1),
                     'murray_diagnosis': 'COPD' if murray_copd else 'Normal',
                     'GLI_diagnosis': 'COPD' if gli_copd else 'Normal',
-                    'Agreement': 'Yes' if murray_copd == gli_copd else 'No'
-                }
-                
-                diagnostic_results.append(diagnostic_result)
-                
-                print(f"  Measured ratio: {measured_ratio:.1f}%")
+                    'Agreement': 'Yes' if murray_copd == gli_copd else 'No',
+                })
+                print(f"  Measured ratio: {measured_ratio:.3f} | GLI LLN: {gli_lln:.3f}")
                 print(f"  Murray: {'COPD' if murray_copd else 'Normal'}, GLI: {'COPD' if gli_copd else 'Normal'}")
-                print(f"  Agreement: {'✅' if murray_copd == gli_copd else '❌'}")
-            
-            print(f"  Murray FEV1: {validation_result['murray_fev1']:.3f}L, GLI: {validation_result['gli_fev1']:.3f}L")
-            
+            else:
+                print("  (no usable measured FEV1/FVC — skipped for diagnostic agreement)")
+
         except Exception as e:
-            print(f"  ❌ Error: {e}")
-            continue
-    
+            failures.append({'Case': i + 1, 'Patient_ID': patient_id, 'stage': 'patient',
+                             'error': f"{type(e).__name__}: {e}"})
+            print(f"  ❌ FAILED {patient_id}: {type(e).__name__}: {e}")
+
+    print(f"\n📊 Processed {len(real_patients)} | validation rows: {len(validation_results)} | "
+          f"diagnostic rows: {len(diagnostic_results)} | logged problems: {len(failures)}")
+    if failures:
+        pd.DataFrame(failures).to_csv('real_extracted_validation_failures.csv', index=False)
+        print("⚠️ Failure details saved: real_extracted_validation_failures.csv")
+
     # Save results
     if validation_results:
         val_df = pd.DataFrame(validation_results)

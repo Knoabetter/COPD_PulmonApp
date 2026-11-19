@@ -174,7 +174,7 @@ const MethodComparisonTab = ({ analysisResults }: { analysisResults: any }) => {
             {hasTrad ? (
               <div>
                 <div className="bg-orange-500 px-5 py-3">
-                  <span className="text-sm font-bold text-white uppercase tracking-wider">Traditional GOLD (Murray)</span>
+                  <span className="text-sm font-bold text-white uppercase tracking-wider">Traditional Murray</span>
                 </div>
                 <div className="px-5 py-5">
                   <p className="text-lg font-black text-slate-900">{tradPattern}</p>

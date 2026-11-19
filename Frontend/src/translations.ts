@@ -28,7 +28,7 @@ export const t = {
   clinicalTitle:  'Spirometry Analysis',
   clinicalDesc:   'Upload individual or batch spirometry PDFs for automated analysis comparing Murray vs GLI 2012 reference equations with ERS/ATS 2022 interpretation.',
   clinicalCap1:   'Single and batch PDF upload',
-  clinicalCap2:   'ERS/ATS 2022 + Traditional GOLD interpretation',
+  clinicalCap2:   'ERS/ATS 2022 + Traditional Murray interpretation',
   clinicalCap3:   'Bronchodilator response assessment',
   clinicalCap4:   'Side-by-side method comparison',
   clinicalButton: 'Open Spirometry Analysis',
@@ -195,7 +195,7 @@ export const t = {
   clinicalInterpretationLabel: 'Clinical Interpretation — ERS/ATS 2022',
   methodsAgree:    'Methods agree',
   methodsDisagree: 'Methods disagree',
-  traditionalGold: 'Traditional GOLD:',
+  traditionalGold: 'Traditional Murray:',
   tlcRequired:     'TLC measurement required — spirometry alone cannot confirm restriction.',
 
   // Evidence panel
@@ -230,7 +230,7 @@ export const t = {
   // Method comparison
   methodComparisonTitle: 'Method Comparison',
   ersGliLabel:           'ERS/ATS 2022 (GLI)',
-  goldMurrayLabel:       'Traditional GOLD (Murray)',
+  goldMurrayLabel:       'Traditional Murray',
   severityLabel:         'Severity:',
 
   // Physician notes
@@ -246,7 +246,7 @@ export const t = {
   // Guideline traceability
   guidelineTraceability: 'Guideline Traceability',
   ersAtsMethod:          'ERS/ATS 2022 Method',
-  goldMethod:            'Traditional GOLD Method',
+  goldMethod:            'Traditional Murray Method',
   ethnicEquityNote:      'Ethnic equity note: GLI 2012 equations were derived primarily from European/Caucasian populations. For non-European patients, consider GLI 2021 equations with broader ethnic coverage where available.',
 
   // Quick phrases (appear in physician notes)
@@ -266,7 +266,7 @@ export const t = {
   noteReportTitle:      (date: string) => `Spirometry Report — ${date}`,
   noteInterpretation:   (pattern: string) => `Interpretation (ERS/ATS 2022): ${pattern}`,
   noteSeverity:         (s: string) => `Severity: ${s}`,
-  noteTraditional:      (pattern: string) => `Traditional (GOLD): ${pattern}`,
+  noteTraditional:      (pattern: string) => `Traditional (Murray): ${pattern}`,
   noteRecommendation:   (text: string) => `Recommendation: ${text}`,
 
   // ── DiagnosticCriteriaButtons ────────────────────────────────────────────────
@@ -367,9 +367,9 @@ export const t = {
 
   // ── TraditionalTab ───────────────────────────────────────────────────────────
   tradNotAvailable:   'פירוש מסורתי אינו זמין',
-  tradTabTitle:       'שיטת GOLD המסורתית',
-  tradTabDesc:        'משתמש במשוואות מוריי המסורתיות עם סף קבוע FEV₁/FVC < 0.70 ו-LLN של 80% מהצפוי. דירוג חומרה GOLD מבוסס על FEV₁ % מהצפוי.',
-  tradGoldAssessment: 'הערכת GOLD',
+  tradTabTitle:       'שיטת Murray המסורתית',
+  tradTabDesc:        'משתמש במשוואות מוריי המסורתיות עם סף קבוע FEV₁/FVC < 0.70 ו-LLN של 80% מהצפוי. דירוג חומרה לפי טבלה 32.3 של Murray, מבוסס על FEV₁ % מהצפוי.',
+  tradGoldAssessment: 'הערכת Murray',
   tradClinicalNotes:  'הערות קליניות',
   tradPatternLabel:   'דפוס:',
   tradSeverityLabel:  'חומרה:',
