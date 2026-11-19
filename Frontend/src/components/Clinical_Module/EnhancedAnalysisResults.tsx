@@ -41,9 +41,28 @@ const MetricRangeBar = ({ percent, llnPct = 80 }: { percent?: number; llnPct?: n
 const fmt = (v: number | undefined | null, d = 2): string =>
   v != null && !isNaN(Number(v)) ? Number(v).toFixed(d) : '—';
 
-const sevConfig = (pattern: string, severity: string) => {
-  const lc = `${pattern} ${severity}`.toLowerCase();
-  if (lc.includes('normal') && !lc.includes('non-s')) return {
+// ── Pattern class from backend flags (labels only as fallback for results saved before flags) ──
+type PatternClass = 'normal' | 'obstructive' | 'mixed' | 'restrictive' | 'other';
+
+const classifyErs = (pattern: string, flags?: any): PatternClass => {
+  if (flags) {
+    if (flags.obstructed && flags.low_fvc) return 'mixed';        // ERS "Possible mixed disorder"
+    if (flags.obstructed)                  return 'obstructive';
+    if (flags.low_fvc)                     return 'restrictive';  // ERS "Possible restriction or non-specific"
+    if (flags.normal)                      return 'normal';
+    return 'other';
+  }
+  const lc = (pattern || '').toLowerCase();
+  if (lc.includes('normal') && !lc.includes('non')) return 'normal';
+  if (lc.includes('mixed'))                          return 'mixed';
+  if (lc.includes('obstruct'))                       return 'obstructive';
+  if (lc.includes('restrict') || lc.includes('non-specific')) return 'restrictive';
+  return 'other';
+};
+
+const sevConfig = (cls: PatternClass, severity: string) => {
+  const lc = (severity || '').toLowerCase();
+  if (cls === 'normal' || lc === 'normal') return {
     border: 'border-l-emerald-500', bg: 'bg-white',
     badge: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500',
   };
@@ -59,15 +78,15 @@ const sevConfig = (pattern: string, severity: string) => {
     border: 'border-l-amber-400', bg: 'bg-white',
     badge: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-400',
   };
-  if (lc.includes('restrict') || lc.includes('non-s')) return {
+  if (cls === 'restrictive') return {
     border: 'border-l-blue-500', bg: 'bg-white',
     badge: 'bg-blue-100 text-blue-800 border-blue-200', dot: 'bg-blue-500',
   };
-  if (lc.includes('mixed')) return {
+  if (cls === 'mixed') return {
     border: 'border-l-purple-500', bg: 'bg-white',
     badge: 'bg-purple-100 text-purple-800 border-purple-200', dot: 'bg-purple-500',
   };
-  if (lc.includes('obstruct') || lc.includes('copd')) return {
+  if (cls === 'obstructive') return {
     border: 'border-l-orange-500', bg: 'bg-white',
     badge: 'bg-orange-100 text-orange-800 border-orange-200', dot: 'bg-orange-500',
   };
@@ -77,28 +96,20 @@ const sevConfig = (pattern: string, severity: string) => {
   };
 };
 
-const summaryLine = (pattern: string): string => {
-  const lc = pattern.toLowerCase();
-  if (lc.includes('normal') && !lc.includes('non')) return t.summaryNormal;
-  if (lc.includes('non-specific'))                   return t.summaryNonSpecific;
-  if (lc.includes('mixed'))                          return t.summaryMixed;
-  if (lc.includes('restrict'))                       return t.summaryRestrictive;
-  if (lc.includes('obstruct') || lc.includes('copd')) return t.summaryObstructive;
+const summaryLine = (cls: PatternClass): string => {
+  if (cls === 'normal')      return t.summaryNormal;
+  // ERS low FVC + normal ratio = "restriction or non-specific": TLC needed to tell them apart
+  if (cls === 'restrictive') return t.summaryNonSpecific;
+  if (cls === 'mixed')       return t.summaryMixed;
+  if (cls === 'obstructive') return t.summaryObstructive;
   return t.summaryDefault;
 };
 
-const nextAction = (pattern: string, hasBD: boolean): { text: string; urgent: boolean } => {
-  const lc = pattern.toLowerCase();
-  if (lc.includes('normal') && !lc.includes('non'))
-    return { text: t.nextNormal, urgent: false };
-  if (lc.includes('non-specific') || (lc.includes('restrict') && !lc.includes('obstruct')))
-    return { text: t.nextTlcRequired, urgent: true };
-  if (lc.includes('obstruct') || lc.includes('copd')) {
-    if (!hasBD) return { text: t.nextObstructiveNoBd, urgent: false };
-    return { text: t.nextObstructiveWithBd, urgent: false };
-  }
-  if (lc.includes('mixed'))
-    return { text: t.nextMixed, urgent: true };
+const nextAction = (cls: PatternClass, hasBD: boolean): { text: string; urgent: boolean } => {
+  if (cls === 'normal')      return { text: t.nextNormal, urgent: false };
+  if (cls === 'restrictive') return { text: t.nextTlcRequired, urgent: true };
+  if (cls === 'obstructive') return { text: hasBD ? t.nextObstructiveWithBd : t.nextObstructiveNoBd, urgent: false };
+  if (cls === 'mixed')       return { text: t.nextMixed, urgent: true };
   return { text: t.nextDefault, urgent: false };
 };
 
@@ -191,18 +202,22 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
   const hasClinical  = !!ersPattern;
   const hasBD        = !!bd?.has_post_bd;
 
-  const cfg          = sevConfig(ersPattern, ersSeverity);
+  const ersClass     = classifyErs(ersPattern, ers2022?.flags);
+  const cfg          = sevConfig(ersClass, ersSeverity);
   const steps        = deriveSteps(analysisResults);
-  const action       = ersPattern ? nextAction(ersPattern, hasBD) : null;
+  const action       = ersPattern ? nextAction(ersClass, hasBD) : null;
 
   const tradIsNormal      = tradPattern.toLowerCase().includes('normal');
   const ersIsNormal       = ersPattern.toLowerCase().includes('normal') && !ersPattern.toLowerCase().includes('non');
   const ersIsObstruction  = ersPattern.toLowerCase().includes('obstruct') || ersPattern.toLowerCase().includes('copd');
   const tradIsObstruction = tradPattern.toLowerCase().includes('obstruct') || tradPattern.toLowerCase().includes('copd');
+  // Agreement comes from the backend (compare_methods); label matching only for older saved results
   const methodsAgree = hasClinical && (
-    (ersIsNormal && tradIsNormal) ||
-    (ersIsObstruction && tradIsObstruction) ||
-    (!ersIsNormal && !tradIsNormal && !ersIsObstruction && !tradIsObstruction)
+    ci?.method_comparison
+      ? !!ci.method_comparison.methods_agree
+      : ((ersIsNormal && tradIsNormal) ||
+         (ersIsObstruction && tradIsObstruction) ||
+         (!ersIsNormal && !tradIsNormal && !ersIsObstruction && !tradIsObstruction))
   );
 
   // ── Evidence table rows ──────────────────────────────────────
@@ -368,7 +383,7 @@ const EnhancedAnalysisResults: React.FC<Props> = ({ analysisResults, onCriteriaS
             </div>
 
             {/* Summary sentence */}
-            <p className="mt-3 text-sm text-slate-600 leading-relaxed">{summaryLine(ersPattern)}</p>
+            <p className="mt-3 text-sm text-slate-600 leading-relaxed">{summaryLine(ersClass)}</p>
 
             {/* Z-scores */}
             {(ers2022?.fev1_z_score != null || ers2022?.fvc_z_score != null) && (

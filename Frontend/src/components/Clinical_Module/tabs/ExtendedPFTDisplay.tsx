@@ -8,12 +8,28 @@ const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
   const gasTransfer = clinicalInterpretation.gas_transfer;
   const completeSummary = clinicalInterpretation.complete_summary;
 
+  // Summary colour (display only). "restrict" also matches "restriction" (was "restrictive" only).
   const getPatternColor = (pattern) => {
-    if (pattern?.toLowerCase().includes('normal'))        return 'text-green-600';
-    if (pattern?.toLowerCase().includes('restrictive'))   return 'text-orange-600';
-    if (pattern?.toLowerCase().includes('hyperinflation')) return 'text-red-600';
-    if (pattern?.toLowerCase().includes('reduced'))       return 'text-yellow-600';
+    const lc = pattern?.toLowerCase() ?? '';
+    if (lc.includes('normal'))         return 'text-green-600';
+    if (lc.includes('hyperinflation')) return 'text-red-600';
+    if (lc.includes('restrict') || lc.includes('mixed')) return 'text-orange-600';
+    if (lc.includes('reduced'))        return 'text-yellow-600';
     return 'text-gray-600';
+  };
+
+  // Lung volumes / gas transfer: colour from backend flags; label fallback for older saved results
+  const volumeColor = (lv) => {
+    const f = lv?.flags;
+    if (!f) return getPatternColor(lv?.pattern);
+    if (f.tlc_low)                    return 'text-orange-600';
+    if (f.air_trapping || f.tlc_high) return 'text-red-600';
+    return 'text-green-600';
+  };
+  const gasColor = (gt) => {
+    const f = gt?.flags;
+    if (!f) return getPatternColor(gt?.pattern);
+    return (f.tlco_low || f.kco_low) ? 'text-yellow-600' : 'text-green-600';
   };
 
   const getValueBgColor = (value) => {
@@ -70,7 +86,7 @@ const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
 
           <div className="mb-4">
             <div className="text-sm text-gray-600 mb-1">{t.extPatternLabel}</div>
-            <div className={`font-semibold ${getPatternColor(lungVolumes.pattern)}`}>
+            <div className={`font-semibold ${volumeColor(lungVolumes)}`}>
               {lungVolumes.pattern}
             </div>
           </div>
@@ -124,7 +140,7 @@ const ExtendedPFTDisplay = ({ clinicalInterpretation }) => {
 
           <div className="mb-4">
             <div className="text-sm text-gray-600 mb-1">{t.extPatternLabel}</div>
-            <div className={`font-semibold ${getPatternColor(gasTransfer.pattern)}`}>
+            <div className={`font-semibold ${gasColor(gasTransfer)}`}>
               {gasTransfer.pattern}
             </div>
           </div>

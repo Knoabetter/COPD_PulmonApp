@@ -24,7 +24,8 @@ try:
         WorkingGLI2012Calculator, 
         MurrayCalculator, 
         ClinicalInterpreter,
-        perform_clinical_interpretation)
+        perform_clinical_interpretation,
+        compare_methods)
     CLINICAL_INTERPRETER_AVAILABLE = True
     print("✅ Clinical interpretation module loaded successfully")
 except ImportError as e:
@@ -196,10 +197,11 @@ def analyze_method_agreement(ers2022_result, traditional_result, measured_values
         trad_severity = traditional_result.get('severity', '')
         
         # Pattern agreement analysis
-        ers_obstructive = any(word in ers_pattern for word in ['obstruction', 'copd', 'airflow'])
-        trad_obstructive = any(word in trad_pattern for word in ['obstruction', 'copd'])
-        ers_normal = 'normal' in ers_pattern
-        trad_normal = 'normal' in trad_pattern
+        comparison = compare_methods(ers2022_result, traditional_result)
+        ers_obstructive = comparison['ers_obstructed']
+        trad_obstructive = comparison['traditional_obstructed']
+        ers_normal = comparison['ers_normal']
+        trad_normal = comparison['traditional_normal']
         
         # Check interpretation agreement
         if (ers_obstructive and trad_obstructive) or (ers_normal and trad_normal):
@@ -212,6 +214,10 @@ def analyze_method_agreement(ers2022_result, traditional_result, measured_values
             agreement['confidence_level'] = 'medium'
         
         # Severity agreement (if both detect obstruction)
+        # NOTE: unused and unreliable — kept only for API compatibility.
+        # Nothing in the frontend reads severity_agreement / confidence_level. ERS grades by
+        # z-score and Murray by % predicted, so their severity words are not comparable, and the
+        # substring match below also counts "Severe" vs "Moderately severe" as agreement.
         if ers_obstructive and trad_obstructive:
             # Compare severity levels
             ers_severity_clean = ers_severity.lower()

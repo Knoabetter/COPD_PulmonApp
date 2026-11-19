@@ -24,9 +24,12 @@ const ERS2022Tab = ({ analysisResults }) => {
     }
   };
 
-  const hasRestriction = ers2022Results.primary_pattern?.toLowerCase().includes('restriction')
-    || ers2022Results.primary_pattern?.toLowerCase().includes('non-specific')
-    || ers2022Results.primary_pattern?.toLowerCase().includes('mixed')
+  // Low FVC (restriction possible / mixed) from backend flags; label check only for older saved results
+  const flags = ers2022Results.flags;
+  const hasRestriction = (flags
+      ? !!flags.low_fvc
+      : (ers2022Results.primary_pattern?.toLowerCase().includes('restriction')
+         || ers2022Results.primary_pattern?.toLowerCase().includes('mixed')))
     || (ers2022Results.secondary_findings ?? []).some((f: string) => f.includes('TLC'));
 
   return (

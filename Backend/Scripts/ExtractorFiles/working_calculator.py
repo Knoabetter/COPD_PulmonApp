@@ -8,6 +8,58 @@ BASE_DIR = os.environ.get('DATA_DIR', os.path.join(os.path.dirname(os.path.abspa
 INPUT_FILE = os.path.join(BASE_DIR, "copd_extracted_data_final.xlsx")
 FILE_SPIRO_GLI = os.path.join(BASE_DIR, "lookuptables.xlsx")
 
+# ── Pattern classification helpers ───────────────────────────────────────────
+# Every obstructive label either interpreter can return contains one of these words:
+#   ERS 2022: "Airflow obstruction", "Possible mixed disorder"
+#   Murray:   "Obstructive ventilatory defect", "Obstruction with concomitant restriction
+#             or air trapping", "Mild obstruction or normal variant"
+# If a label is renamed, update these helpers (see also Bug 6: explicit booleans).
+OBSTRUCTIVE_KEYWORDS = ('obstruction', 'obstructive', 'mixed')
+
+
+def is_obstructive_pattern(pattern):
+    """True if a spirometry primary_pattern means FEV1/FVC is below the threshold."""
+    p = (pattern or '').lower()
+    return any(k in p for k in OBSTRUCTIVE_KEYWORDS)
+
+
+def is_normal_pattern(pattern):
+    """True only for a fully normal result ("Normal spirometry"), not "...normal variant"."""
+    return (pattern or '').strip().lower().startswith('normal')
+
+
+def spirometry_obstructed(interp):
+    """Obstruction from an interpreter result: explicit flag first, label only as fallback
+    (e.g. results saved before flags existed)."""
+    flags = (interp or {}).get('flags')
+    if flags is not None:
+        return bool(flags.get('obstructed'))
+    return is_obstructive_pattern((interp or {}).get('primary_pattern'))
+
+
+def spirometry_normal(interp):
+    flags = (interp or {}).get('flags')
+    if flags is not None:
+        return bool(flags.get('normal'))
+    return is_normal_pattern((interp or {}).get('primary_pattern'))
+
+
+def compare_methods(ers, trad):
+    """Single source of truth for ERS 2022 vs Murray agreement (backend and UI)."""
+    ers_obs, trad_obs = spirometry_obstructed(ers), spirometry_obstructed(trad)
+    ers_norm, trad_norm = spirometry_normal(ers), spirometry_normal(trad)
+    both_obstructed = ers_obs and trad_obs
+    both_normal = ers_norm and trad_norm
+    # Neither normal nor obstructive in both (e.g. restriction / non-specific in both)
+    both_other = not (ers_obs or trad_obs or ers_norm or trad_norm)
+    return {
+        'ers_obstructed': ers_obs, 'traditional_obstructed': trad_obs,
+        'ers_normal': ers_norm, 'traditional_normal': trad_norm,
+        'both_obstructed': both_obstructed, 'both_normal': both_normal,
+        'methods_agree': both_obstructed or both_normal or both_other,
+    }
+
+
 def gli_z_score(measured, M, S, L):
     """Exact GLI 2012 z-score from LMS (Box-Cox) parameters.
     z = ((measured/M)^L - 1) / (L*S);  z = ln(measured/M) / S when L ~ 0.
@@ -305,7 +357,8 @@ class ClinicalInterpreter:
             'primary_pattern': 'Unknown',
             'secondary_findings': [],
             'severity': 'Unknown',
-            'clinical_notes': []
+            'clinical_notes': [],
+            'flags': None,   # set once the pattern is decided; None = not interpretable
         }
         
         try:
@@ -410,6 +463,17 @@ class ClinicalInterpreter:
                         interpretation['severity'] = 'Severe'
                     
                     interpretation['clinical_notes'].append(f"FEV1 z-score: {fev1_z_score:.2f}")
+
+            # Explicit flags — the same comparisons that chose the pattern above.
+            # ERS 2022 Fig. 8 does not use FEV1 for the pattern, so "normal" = ratio and FVC normal.
+            ers_obstructed = ratio_measured < ratio_lln
+            ers_low_fvc = fvc_measured < fvc_lln
+            interpretation['flags'] = {
+                'obstructed': bool(ers_obstructed),
+                'low_fvc': bool(ers_low_fvc),
+                'low_fev1': bool(fev1_lln > 0 and fev1_measured < fev1_lln),
+                'normal': bool(not ers_obstructed and not ers_low_fvc),
+            }
             
             # Add percentage predicted for reference
             if fev1_pred > 0 and fvc_pred > 0:
@@ -435,7 +499,8 @@ class ClinicalInterpreter:
             'primary_pattern': 'Unknown',
             'secondary_findings': [],
             'severity': 'Unknown',
-            'clinical_notes': []
+            'clinical_notes': [],
+            'flags': None,   # set once the pattern is decided; None = not interpretable
         }
 
         try:
@@ -546,6 +611,15 @@ class ClinicalInterpreter:
                     interpretation['clinical_notes'].append(
                         f"FEV1: {fev1_percent:.0f}% predicted, FVC: {fvc_percent:.0f}% predicted")
 
+            # Explicit flags — the same comparisons that chose the pattern above
+            murray_obstructed = ratio_measured < 0.70
+            interpretation['flags'] = {
+                'obstructed': bool(murray_obstructed),
+                'low_fvc': bool(fvc_low),
+                'low_fev1': bool(fev1_low),
+                'normal': bool(not murray_obstructed and not fvc_low and not fev1_low),
+            }
+
         except Exception as e:
             interpretation['clinical_notes'].append(f"Error in Murray interpretation: {str(e)}")
 
@@ -579,10 +653,7 @@ class ClinicalInterpreter:
                 interpretation['spirometry'] = self.interpret_traditional_murray(measured_spirometry, murray_results)
 
             # Derive obstruction flag from spirometry result for lung volumes flowchart
-            is_obstructed = False
-            if interpretation.get('spirometry'):
-                pattern = interpretation['spirometry'].get('primary_pattern', '').lower()
-                is_obstructed = any(k in pattern for k in ('obstruction', 'obstructive', 'mixed', 'copd'))
+            is_obstructed = spirometry_obstructed(interpretation.get('spirometry'))
 
             # Interpret lung volumes (RV, TLC) — pass obstruction status for Mixed disorder detection
             interpretation['lung_volumes'] = self.interpret_lung_volumes(extracted_data, is_obstructed)
@@ -729,6 +800,13 @@ class ClinicalInterpreter:
 
             else:
                 volume_interpretation["pattern"] = "Normal lung volumes"
+
+            volume_interpretation["flags"] = {
+                'tlc_low': bool(tlc_low),
+                'tlc_high': bool(tlc_high),
+                'air_trapping': bool(air_trap),
+                'tlc_known': tlc_meas is not None or tlc_percent is not None,
+            }
 
             # Add quantitative notes
             if tlc_percent is not None:
@@ -911,9 +989,10 @@ class ClinicalInterpreter:
                 if kco_percent < 80:
                     gas_interpretation["findings"].append("Reduced KCO (<80% predicted)")
 
-            # Pattern logic
-            tlco_reduced = any("TLCO" in f for f in gas_interpretation["findings"])
-            kco_reduced = any("KCO" in f for f in gas_interpretation["findings"])
+            # Pattern logic — from the numbers, not from the findings text
+            tlco_reduced = dlco_percent is not None and dlco_percent < 80
+            kco_reduced = kco_percent is not None and kco_percent < 80
+            gas_interpretation["flags"] = {'tlco_low': bool(tlco_reduced), 'kco_low': bool(kco_reduced)}
 
             if tlco_reduced and kco_reduced:
                 gas_interpretation["pattern"] = "Parenchymal disease pattern"
@@ -947,42 +1026,59 @@ class ClinicalInterpreter:
             gas_pattern    = gas_transfer.get('pattern', '')
             gas_findings   = str(gas_transfer.get('findings', []))
 
-            sp = spiro_pattern.lower()
-            vp = volume_pattern.lower()
+            # Decide from explicit flags (labels are for display only)
+            obstructed = spirometry_obstructed(spirometry)
+            spiro_normal = spirometry_normal(spirometry)
+            sflags = spirometry.get('flags') or {}
+            low_fvc = bool(sflags.get('low_fvc'))
+            vflags = volumes.get('flags') or {}
+            tlc_known = bool(vflags.get('tlc_known'))
+            tlc_low = bool(vflags.get('tlc_low'))
+            tlc_high = bool(vflags.get('tlc_high'))
+            air_trapping = bool(vflags.get('air_trapping'))
+            tlco_low = bool((gas_transfer.get('flags') or {}).get('tlco_low'))
 
-            if volume_pattern == 'Mixed disorder':
+            if obstructed and tlc_low:
+                # Lung-volume "Mixed disorder" (low TLC + air trapping + obstruction) and
+                # obstruction with simple restriction both end up here, as before
                 summary['overall_pattern'] = 'Mixed obstructive-restrictive disorder'
-                if 'reduced tlco' in gas_findings.lower():
+                if tlco_low:
                     summary['key_findings'].append('Mixed disorder with reduced gas transfer — consider ILD with airflow obstruction')
 
-            elif 'obstruction' in sp or 'obstructive' in sp or 'copd' in sp:
-                if 'hyperinflation' in vp:
-                    summary['overall_pattern'] = 'Obstructive disorder with hyperinflation'
-                elif 'simple restriction' in vp or 'complex restriction' in vp:
-                    summary['overall_pattern'] = 'Mixed obstructive-restrictive disorder'
-                else:
-                    summary['overall_pattern'] = 'Obstructive disorder'
-                if 'reduced tlco' in gas_findings.lower() or 'tlco' in gas_findings.lower():
+            elif obstructed and low_fvc and not tlc_known:
+                # ERS "Possible mixed disorder": low FVC may be restriction or air trapping
+                summary['overall_pattern'] = 'Possible mixed disorder — lung volumes needed'
+                if tlco_low:
                     summary['key_findings'].append('Obstruction with reduced gas transfer — consider emphysema')
 
-            elif 'restriction' in sp or 'simple restriction' in vp or 'complex restriction' in vp:
-                if 'complex' in vp:
-                    summary['overall_pattern'] = 'Complex restrictive disorder'
+            elif obstructed:
+                if air_trapping:
+                    summary['overall_pattern'] = 'Obstructive disorder with hyperinflation'
                 else:
-                    summary['overall_pattern'] = 'Restrictive disorder'
-                if 'reduced tlco' in gas_findings.lower():
+                    summary['overall_pattern'] = 'Obstructive disorder'
+                if tlco_low:
+                    summary['key_findings'].append('Obstruction with reduced gas transfer — consider emphysema')
+
+            elif tlc_low:
+                summary['overall_pattern'] = 'Complex restrictive disorder' if air_trapping else 'Restrictive disorder'
+                if tlco_low:
                     summary['key_findings'].append('Restriction with reduced gas transfer — consider interstitial lung disease')
 
-            elif 'non-specific' in sp:
+            elif low_fvc and not tlc_known:
+                # Low FVC with normal ratio but no TLC measured: restriction cannot be confirmed
+                summary['overall_pattern'] = 'Possible restriction — lung volumes needed'
+
+            elif not spiro_normal and spirometry.get('flags') is not None:
+                # Low FVC with normal TLC, or (Murray) low FEV1 with normal ratio and FVC
                 summary['overall_pattern'] = 'Non-specific ventilatory defect'
-                if 'reduced tlco' in gas_findings.lower():
+                if tlco_low:
                     summary['key_findings'].append('Non-specific pattern with reduced gas transfer — consider pulmonary vascular disease')
 
-            elif volume_pattern == 'Large lungs':
+            elif spiro_normal and tlc_high and not air_trapping:
                 summary['overall_pattern'] = 'Large lungs (constitutional or air trapping)'
 
-            elif 'normal' in sp and ('normal' in vp or volume_pattern == ''):
-                if 'reduced tlco' in gas_findings.lower():
+            elif spiro_normal and not (tlc_low or tlc_high or air_trapping):
+                if tlco_low:
                     summary['overall_pattern'] = 'Isolated reduction in gas transfer'
                     summary['recommendations'].append('Consider pulmonary vascular disease or early ILD')
                 else:
@@ -1042,18 +1138,20 @@ def perform_clinical_interpretation(murray_results, gli_results, measured_values
     ers_pattern = ers2022_interpretation['primary_pattern']
     trad_pattern = traditional_interpretation['primary_pattern']
     
-    if 'obstruction' in ers_pattern.lower() and 'copd' in trad_pattern.lower():
+    method_comparison = compare_methods(ers2022_interpretation, traditional_interpretation)
+    ers_obstructive  = method_comparison['ers_obstructed']
+    trad_obstructive = method_comparison['traditional_obstructed']
+
+    if method_comparison['both_obstructed']:
         print("✅ Both methods detect obstructive pattern")
-    elif 'normal' in ers_pattern.lower() and 'normal' in trad_pattern.lower():
+    elif method_comparison['both_normal']:
         print("✅ Both methods agree: Normal")
+    elif method_comparison['methods_agree']:
+        print("✅ Both methods agree: neither normal nor obstructive")
     else:
         print("⚠️ Methods disagree - ERS 2022 more accurate for age/height")
     
     # Age-bias warning when methods disagree
-    ers_pat  = ers2022_interpretation.get('primary_pattern', '').lower()
-    trad_pat = traditional_interpretation.get('primary_pattern', '').lower()
-    ers_obstructive  = 'obstruction' in ers_pat  or 'obstructive' in ers_pat
-    trad_obstructive = 'obstruction' in trad_pat or 'obstructive' in trad_pat
     age_bias_warning = None
     if ers_obstructive != trad_obstructive:
         if trad_obstructive and not ers_obstructive and age >= 60:
@@ -1080,7 +1178,8 @@ def perform_clinical_interpretation(murray_results, gli_results, measured_values
         'ers2022': ers2022_interpretation,
         'traditional': traditional_interpretation,
         'patient_info': {'age': age, 'sex': sex},
-        'age_bias_warning': age_bias_warning
+        'age_bias_warning': age_bias_warning,
+        'method_comparison': method_comparison,   # UI uses this instead of its own label matching
     }
 
     # BD reversibility response (needs predicted values from calculators)
